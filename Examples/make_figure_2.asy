@@ -1,4 +1,4 @@
-import MyFunctions;
+import MaximumMathematics;
 
 unitsize(1cm);
 
