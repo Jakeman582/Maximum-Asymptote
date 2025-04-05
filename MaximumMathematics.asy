@@ -2,6 +2,30 @@ import three;
 
 unitsize(1cm);
 
+void figure(
+    picture pic = currentpicture,
+    real unit, 
+    real width, real height, 
+    string caption = "",
+    pen background_color = white, 
+    real caption_height = 1,
+    real caption_margin = 0.1
+) {
+
+    real x_min = -width/2;
+    real x_max = width/2;
+    real y_min = -height/2 - caption_height - caption_margin;
+    real y_max = -height/2;
+
+    // Draw a box around at the bottom of the picture which is where
+    // the caption will go
+    fill(pic, box((x_min, y_min), (x_max, y_max)), background_color);
+
+    // Draw the caption
+    label(pic, caption, (0, y_max - caption_height/2));
+
+}
+
 void drawcircle(pair center, real radius, pen p=black) {
     draw(circle(center, radius), p);
 }
@@ -17,17 +41,17 @@ void arrow_diagram_2(
     string A_string, string[] A, 
     string B_string, string[] B, 
     pair[] relation, 
-    string caption, real caption_margin = 0.1
+    string caption = "", real caption_margin = 0.1
 ) {
 
     // Several scaling factors for text and dots
     real dot_factor = 0.5;
     real element_text_factor = 1.5;
     real set_text_factor = 3;
-    real caption_text_factor = 1.5;
+    //real caption_text_factor = 1.5;
     real label_zone = 0.2;
-    real caption_zone = 0.05;
-    real set_zone = 1.0 - label_zone - caption_zone;
+    //real caption_zone = 0.05;
+    real set_zone = 1.0 - label_zone;// - caption_zone;
 
     // Setting up the canvas dimensions
     real x_min = -0.5 * length;
@@ -41,15 +65,15 @@ void arrow_diagram_2(
     pen dot_pen = linewidth(dot_factor * length);
     pen element_pen = fontsize(element_text_factor * length);
     pen set_pen = fontsize(set_text_factor * length);
-    pen caption_pen = fontsize(caption_text_factor * length);
+    //pen caption_pen = fontsize(caption_text_factor * length);
 
     // The set labels will appear in their own zone
     real label_zone_top = y_max;
     real label_zone_height = label_zone * length;
 
     // The caption label will appear in the bottom zone
-    real caption_zone_top = y_min + length * caption_zone;
-    real caption_zone_height = caption_zone * length;
+    //real caption_zone_top = y_min + length * caption_zone;
+    //real caption_zone_height = caption_zone * length;
 
     // The sets will use the bulk part of the height
     real set_zone_top = y_max - label_zone_height;
@@ -81,7 +105,7 @@ void arrow_diagram_2(
     }
 
     // Draw a background box
-    fill(pic, box((x_min, y_min) + caption_margin*S, (x_max, y_max)), white);
+    fill(pic, box((x_min, y_min), (x_max, y_max)), white);
 
     // Draw the set labels and set elements
     label(pic, A_string, A_label, p = set_pen);
@@ -112,7 +136,7 @@ void arrow_diagram_2(
     }
 
     // Draw the caption label
-    label(pic, caption, (0, caption_zone_top - caption_zone_height / 2.0), p = caption_pen);
+    //label(pic, caption, (0, caption_zone_top - caption_zone_height / 2.0), p = caption_pen);
 }
 
 void arrow_diagram_3(
@@ -124,7 +148,7 @@ void arrow_diagram_3(
     string C_string, string[] C,
     pair[] relation_AB,
     pair[] relation_BC, 
-    string caption, real caption_margin = 0.1
+    string caption = "", real caption_margin = 0.1
 ) {
 
     // Several scaling factors for text and dots
