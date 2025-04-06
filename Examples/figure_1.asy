@@ -24,7 +24,7 @@ figure(
     fig_1,
     1cm,
     8, 8,
-    "(a) $f: A \rightarrow B$"
+    "$f_1: A \rightarrow B$"
 );
 
 add(fig_1);

@@ -19,7 +19,7 @@ void figure(
 
     // Draw a box around at the bottom of the picture which is where
     // the caption will go
-    fill(pic, box((x_min, y_min), (x_max, y_max)), background_color);
+    fill(pic, box((x_min, y_min), (x_max, y_max + 0.02)), background_color);
 
     // Draw the caption
     label(pic, caption, (0, y_max - caption_height/2));
