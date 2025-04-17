@@ -1,30 +1,102 @@
+import graph;
 import three;
 
 unitsize(1cm);
 
-void figure(
-    picture pic = currentpicture,
-    real unit, 
-    real width, real height, 
-    string caption = "",
-    pen background_color = white, 
-    real caption_height = 1,
-    real caption_margin = 0.1
-) {
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Maximum Mathematics color palatte
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
-    real x_min = -width/2;
-    real x_max = width/2;
-    real y_min = -height/2 - caption_height - caption_margin;
-    real y_max = -height/2;
+// Main brand colors
+pen brand_color_1 = RGB(0, 0, 255);    // Blue
+pen brand_color_2 = RGB(255, 165, 0);  // Orange
 
-    // Draw a box around at the bottom of the picture which is where
-    // the caption will go
-    fill(pic, box((x_min, y_min), (x_max, y_max + 0.02)), background_color);
+// Figure colors
+pen figure_background_color = white;
 
-    // Draw the caption
-    label(pic, caption, (0, y_max - caption_height/2));
+// Table colors
+pen table_header = gray;
+pen table_sub_header = mediumgray;
 
+// Graphing colors
+pen axis_color = black;
+pen function_color_1 = brand_color_1;
+pen function_color_2 = brand_color_2;
+pen slope_color_1 = gray;
+pen slope_color_2 = mediumgray;
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Maximum Mathematics graphing design
+///////////////////////////////////////////////////////////////////////////////////////////////////
+pen axis_thickness = linewidth(1.5);
+real tick_size = 0.15;
+arrowbar axis_arrow = ArcArrows(size = 4);
+pen function_thickness = linewidth(1.2);
+arrowbar function_arrow = ArcArrows(SimpleHead, size = 3);
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Maximum Mathematics data types
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Boolean functions
+bool[] logical_values = {false, true};
+using proposition_1 = bool(bool);
+using proposition_2 = bool(bool, bool);
+using proposition_3 = bool(bool, bool, bool);
+
+// Real valued functions
+using real_function_1 = real(real);
+using real_function_2 = real(real, real);
+using real_function_3 = real(real, real, real);
+
+// Plotting structures
+struct PlotWindow {
+    real x_min;
+    real x_max;
+    real y_min;
+    real y_max;
+    real window_width;
+    real window_height;
+
+    void operator init(
+        real x_min = -1.0, real x_max = 1.0,
+        real y_min = -1.0, real y_max = 1.0,
+        real window_width = 1.0, real window_height = 1.0
+    ) {
+        this.x_min = x_min;
+        this.x_max = x_max;
+        this.y_min = y_min;
+        this.y_max = y_max;
+        this.window_width = window_width;
+        this.window_height = window_height;
+    }
+
+    pair transform(pair input) {
+        real x = (input.x - this.x_min) / (this.x_max - this.x_min) * this.window_width;
+        real y = (input.y - this.y_min) / (this.y_max - this.y_min) * this.window_height;
+        return (x, y);
+    }
+
+    real transform_x(real x) {
+        return (x - this.x_min) / (this.x_max - this.x_min) * this.window_width;
+    }
+
+    real transform_y(real y) {
+        return (y - this.y_min) / (this.y_max - this.y_min) * this.window_height;
+    }
+
+    path scale_function_1(real_function_1 f) {
+        path g = graph(f, this.x_min, this.x_max);
+        g = shift(-this.x_min, -this.y_min) * g;
+        g = xscale(this.window_width / (this.x_max - this.x_min)) * g;
+        g = yscale(this.window_height / (this.y_max - this.y_min)) * g;
+        return g;
+    }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+// Maximum Mathematics functions
+///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void drawcircle(pair center, real radius, pen p=black) {
     draw(circle(center, radius), p);
@@ -280,9 +352,6 @@ void arrow_diagram_3(
     label(pic, caption, (0, caption_zone_top - caption_zone_height / 2.0), p = caption_pen);
 }
 
-bool[] logical_values = {false, true};
-
-using proposition_1 = bool(bool);
 struct Proposition_1 {
     string text_upper;
     string text_lower;
@@ -497,10 +566,8 @@ void truth_table_1(
             current_x += column_widths[i + 1];
         }
     }
-
 }
 
-using proposition_2 = bool(bool, bool);
 struct Proposition_2 {
     string text_upper;
     string text_lower;
@@ -725,10 +792,8 @@ void truth_table_2(
             current_x += column_widths[i + 2];
         }
     }
-
 }
 
-using proposition_3 = bool(bool, bool, bool);
 struct Proposition_3 {
     string text_upper;
     string text_lower;
@@ -947,5 +1012,207 @@ void truth_table_3(
         current_y = current_y - expression_row_height;
         draw(pic, (0, current_y)--(width, current_y));
     }
+}
 
+void draw_x_axis(
+    picture pic = currentpicture,
+    PlotWindow plot_window
+) {
+
+    // Get the X axis endpoints
+    pair left = plot_window.transform((plot_window.x_min, 0));
+    pair right = plot_window.transform((plot_window.x_max, 0));
+
+    // Draw the X axis
+    draw(
+        pic,
+        left -- right,
+        p = axis_color + axis_thickness,
+        arrow = axis_arrow
+    );
+}
+
+void draw_x_ticks(
+    picture pic = currentpicture,
+    PlotWindow plot_window
+) {
+    // Get the integer x values for the left-most and right-most tick marks
+    real left = (real)ceil(plot_window.x_min + 1.0);
+    real right = (real)floor(plot_window.x_max - 1.0);
+
+    // Draw each of the tick marks (for every integer between the left-most and right-most tick marks)
+    for(real i = left; i <= right; ++i) {
+
+        // Determine where the x value and y values are in the window
+        pair bottom = plot_window.transform((i, -tick_size));
+        pair top = plot_window.transform((i, tick_size));
+        draw(
+            pic,
+            bottom -- top
+        );
+    }
+}
+
+void draw_y_axis(
+    picture pic = currentpicture,
+    PlotWindow plot_window
+) {
+
+    // Get the Y axis endpoints
+    pair bottom = plot_window.transform((0, plot_window.y_min));
+    pair top = plot_window.transform((0, plot_window.y_max));
+
+    // Draw the Y axis
+    draw(
+        pic,
+        bottom -- top,
+        p = axis_color + axis_thickness,
+        arrow = axis_arrow
+    );
+}
+
+void draw_y_ticks(
+    picture pic = currentpicture,
+    PlotWindow plot_window
+) {
+    // Get the integer y values for the left-most and right-most tick marks
+    real bottom = (real)ceil(plot_window.y_min + 1.0);
+    real top = (real)floor(plot_window.y_max - 1.0);
+
+    // Draw each of the tick marks (for every integer between the left-most and right-most tick marks)
+    for(real i = bottom; i <= top; ++i) {
+
+        // Determine where the x value and y values are in the window
+        pair left = plot_window.transform((-tick_size, i));
+        pair right = plot_window.transform((tick_size, i));
+        draw(
+            pic,
+            left -- right
+        );
+    }
+}
+
+void draw_real_function(
+    picture pic = currentpicture,
+    PlotWindow plot_window,
+    real_function_1 f
+) {
+    draw(
+        pic,
+        plot_window.scale_function_1(f),
+        p = function_color_1 + function_thickness,
+        arrow = function_arrow
+    );
+}
+
+void slope_field_1(
+    picture pic = currentpicture,
+    real width, real height,
+    pair x_range, pair y_range,
+    pair mesh,
+    real slope_scale = 1,
+    real_function_1 slope
+) {
+    real x_min = 0;
+    real x_max = width;
+    real y_min = 0;
+    real y_max = height;
+
+    real fig_delta_x = width / (mesh.x + 1);
+    real x_transform = width / (x_range.y - x_range.x);
+
+    real fig_delta_y = height / (mesh.y + 1);
+    real y_transform = height / (y_range.y - y_range.x);
+
+
+    real delta_x = (x_range.y - x_range.x) / (mesh.x + 1);
+    real delta_y = (y_range.y - y_range.x) / (mesh.y + 1);
+
+    real radius = slope_scale * min(delta_x, delta_y) / 2;
+
+    for(int i = 1; i <= (int)mesh.x; ++i) {
+
+        real current_x = x_range.x + i * delta_x;
+        real current_slope = slope(current_x);
+        real angle = atan(current_slope);
+        real xl = current_x - cos(angle) * radius;
+        real xr = current_x + cos(angle) * radius;
+        real fig_xl = (xl - x_range.x) * x_transform;
+        real fig_xr = (xr - x_range.x) * x_transform;
+
+        for(int j = 1; j <= (int)mesh.y; ++j) {
+
+            real current_y = y_range.x + j * delta_y;
+
+            real yb = current_y - sin(angle) * radius;
+            real yt = current_y + sin(angle) * radius;
+
+            real fig_yb = (yb - y_range.x) * y_transform;
+            real fig_yt = (yt - y_range.x) * y_transform;
+
+            draw(
+                pic,
+                (fig_xl, fig_yb) -- (fig_xr, fig_yt),
+                p = slope_color_2
+            );
+        }
+    }
+}
+
+void slope_field_2(
+    picture pic = currentpicture,
+    real width, real height,
+    pair x_range, pair y_range,
+    pair mesh,
+    real slope_scale = 1,
+    real_function_2 slope
+) {
+
+    real x_min = 0;
+    real x_max = width;
+    real y_min = 0;
+    real y_max = height;
+
+    real fig_delta_x = width / (mesh.x + 1);
+    real x_transform = width / (x_range.y - x_range.x);
+
+    real fig_delta_y = height / (mesh.y + 1);
+    real y_transform = height / (y_range.y - y_range.x);
+
+
+    real delta_x = (x_range.y - x_range.x) / (mesh.x + 1);
+    real delta_y = (y_range.y - y_range.x) / (mesh.y + 1);
+
+    real radius = slope_scale * min(delta_x, delta_y) / 2;
+
+    for(int i = 1; i <= (int)mesh.x; ++i) {
+
+        real current_x = x_range.x + i * delta_x;
+
+        for(int j = 1; j <= (int)mesh.y; ++j) {
+
+
+            real current_y = y_range.x + j * delta_y;
+
+            real current_slope = slope(current_x, current_y);
+
+            real angle = atan(current_slope);
+
+            real xl = current_x - cos(angle) * radius;
+            real xr = current_x + cos(angle) * radius;
+            real yb = current_y - sin(angle) * radius;
+            real yt = current_y + sin(angle) * radius;
+
+            real fig_xl = (xl - x_range.x) * x_transform;
+            real fig_xr = (xr - x_range.x) * x_transform;
+            real fig_yb = (yb - y_range.x) * y_transform;
+            real fig_yt = (yt - y_range.x) * y_transform;
+
+            draw(
+                pic,
+                (fig_xl, fig_yb) -- (fig_xr, fig_yt),
+                p = slope_color_2
+            );
+        }
+    }
 }
