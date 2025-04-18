@@ -4,7 +4,7 @@ import three;
 unitsize(1cm);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// Maximum Mathematics color palatte
+// Maximum Mathematics color palette
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 // Main brand colors
@@ -105,6 +105,23 @@ void drawcircle(pair center, real radius, pen p=black) {
 void drawbox(triple corner, real width, real length, real height) {
     surface s = shift(corner) * scale(width, length, height) * unitcube;
     draw(s, surfacepen = white);
+}
+
+void path_label(
+    picture pic = currentpicture,
+    Label label_text,
+    path label_path, real position = 0.5,
+    pen p = currentpen,
+    align align = NoAlign,
+    bool sloped = false
+) {
+    Label new_label = Label(label_text, align, position = Relative(position));
+    if(sloped) {
+        pair slope_direction = dir(label_path, reltime(label_path, position));
+        real angle = degrees(atan2(slope_direction.y, slope_direction.x));
+        new_label = rotate(angle) * new_label;
+    }
+    label(pic, new_label, label_path, p = p);
 }
 
 void arrow_diagram_2(
