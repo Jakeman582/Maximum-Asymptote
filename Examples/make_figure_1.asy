@@ -16,8 +16,8 @@ unitsize(1cm);
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Image settings
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-real width = 5;
-real height = 5;
+real width = 13;
+real height = 9;
 real margin = 0.1;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -39,25 +39,17 @@ fill(
     p = figure_background_color
 );
 
-// Setting the graphing window
-PlotWindow plot_window = PlotWindow(
-    -3.0, 5.0,
-    -3.0, 5.0, 
+string[] A = {"$\spadesuit$", "$\heartsuit$", "$\diamondsuit$", "$\clubsuit$"};
+string[] B = {"B", "R"};
+
+tree_diagram_2(
+    image,
+    A, B,
     width, height
 );
 
-// Plotting graph elements
-draw_x_axis(image, plot_window);
-draw_x_ticks(image, plot_window);
-draw_y_axis(image, plot_window);
-draw_y_ticks(image, plot_window);
-
-real f(real x) {return x;}
-draw_real_function(image, plot_window, f);
-clip(image, box((0, 0), (plot_window.window_width, plot_window.window_height)));
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// Drawing the caption
+// Drawing the caption container
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 picture caption;
 
@@ -66,6 +58,12 @@ fill(
     caption,
     box((-margin, -margin - caption_height), (width + margin, -margin)),
     p = figure_background_color
+);
+
+label(
+    caption,
+    "A", 
+    (width/2, -margin - caption_height/2)
 );
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

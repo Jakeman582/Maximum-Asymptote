@@ -1,12 +1,27 @@
 {
     "cSpell.words": [
+        "arrowbar",
+        "currentpen",
+        "currentpicture",
         "currentprojection",
+        "dotfactor",
         "drawbox",
+        "drawcircle",
+        "drawpen",
+        "filldraw",
+        "fillpen",
+        "fontsize",
         "leftrightarrow",
         "lightgreen",
+        "lightyellow",
+        "mediumgray",
         "outformat",
         "rightarrow",
+        "surfacepen",
+        "unitcube",
         "unitsize",
-        "varepsilon"
+        "varepsilon",
+        "xscale",
+        "yscale"
     ]
 }

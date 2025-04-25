@@ -25,14 +25,19 @@ pen function_color_2 = brand_color_2;
 pen slope_color_1 = gray;
 pen slope_color_2 = mediumgray;
 
+// Tree Diagram colors
+pen pruned_branch_color = RGB(255, 36, 0);
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// Maximum Mathematics graphing design
+// Maximum Mathematics figure design
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
 pen axis_thickness = linewidth(1.5);
 real tick_size = 0.15;
 arrowbar axis_arrow = ArcArrows(size = 4);
 pen function_thickness = linewidth(1.2);
 arrowbar function_arrow = ArcArrows(SimpleHead, size = 3);
+pen label_size = fontsize(0.4cm);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Maximum Mathematics data types
@@ -43,6 +48,49 @@ bool[] logical_values = {false, true};
 using proposition_1 = bool(bool);
 using proposition_2 = bool(bool, bool);
 using proposition_3 = bool(bool, bool, bool);
+
+// Boolean structures
+struct Proposition_1 {
+    string text_upper;
+    string text_lower;
+    proposition_1 value;
+    real weight;
+
+    void operator init(string text_upper, string text_lower, proposition_1 value, real weight) {
+        this.text_upper = text_upper;
+        this.text_lower = text_lower;
+        this.value = value;
+        this.weight = weight;
+    }
+};
+
+struct Proposition_2 {
+    string text_upper;
+    string text_lower;
+    proposition_2 value;
+    real weight;
+
+    void operator init(string text_upper, string text_lower, proposition_2 value, real weight) {
+        this.text_upper = text_upper;
+        this.text_lower = text_lower;
+        this.value = value;
+        this.weight = weight;
+    }
+};
+
+struct Proposition_3 {
+    string text_upper;
+    string text_lower;
+    proposition_3 value;
+    real weight;
+
+    void operator init(string text_upper, string text_lower, proposition_3 value, real weight) {
+        this.text_upper = text_upper;
+        this.text_lower = text_lower;
+        this.value = value;
+        this.weight = weight;
+    }
+};
 
 // Real valued functions
 using real_function_1 = real(real);
@@ -92,7 +140,86 @@ struct PlotWindow {
         g = yscale(this.window_height / (this.y_max - this.y_min)) * g;
         return g;
     }
-}
+};
+
+struct Branch2 {
+    string x;
+    string y;
+
+    void operator init(string x, string y = "") {
+        this.x = x;
+        this.y = y;
+    }
+
+    bool equals(Branch2 other) {
+        return (this.x == other.x) && (this.y == other.y);
+    }
+};
+
+struct Branch3 {
+    string x;
+    string y;
+    string z;
+
+    void operator init(string x, string y = "", string z = "") {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
+
+    bool equals(Branch3 other) {
+        return (this.x == other.x) && (this.y == other.y) && (this.z == other.z);
+    }
+};
+
+struct PrunedBranches2 {
+    Branch2[] pruned_branches;
+
+    void prune_branch(Branch2 branch) {
+        pruned_branches.push(branch);
+    }
+
+    bool is_pruned(Branch2 branch) {
+
+        // Check if the parent branch is pruned
+        Branch2 parent = Branch2(branch.x);
+
+        // Check if this branch, or this branch's parent is pruned
+        for(Branch2 current_branch : pruned_branches) {
+            if((current_branch.equals(parent)) || (current_branch.equals(branch))) {return true;}
+        }
+
+        // At this point, the branch is not pruned
+        return false;
+    }
+};
+
+struct PrunedBranches3 {
+    Branch3[] pruned_branches;
+
+    void prune_branch(Branch3 branch) {
+        pruned_branches.push(branch);
+    }
+
+    bool is_pruned(Branch3 branch) {
+
+        // Check if the parent branch is pruned
+        Branch3 grandparent = Branch3(branch.x);
+        Branch3 parent = Branch3(branch.x, branch.y);
+
+        // Check if this branch, this branch's parent, or this branch's grandparent is pruned
+        for(Branch3 current_branch : pruned_branches) {
+            if(
+                (current_branch.equals(grandparent)) || 
+                (current_branch.equals(parent)) || 
+                (current_branch.equals(branch))
+            ) {return true;}
+        }
+
+        // At this point, the branch is not pruned
+        return false;
+    }
+};
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Maximum Mathematics functions
@@ -122,6 +249,65 @@ void path_label(
         new_label = rotate(angle) * new_label;
     }
     label(pic, new_label, label_path, p = p);
+}
+
+void tree_diagram_2(
+    picture pic = currentpicture,
+    string[] A, string[] B,
+    real width, real height
+    //PrunedPairs pruned_pairs = new PrunedPairs
+) {
+    // Dealing with margins and spacing of the branches
+    real branch_gap_1 = 0.5;
+    real branch_gap_2 = 0.5;
+
+    // Dealing with margins and spacing of the labels
+    real margin = 0.6;
+    real margin_label_1 = 0.25;
+    real margin_label_2 = 0.6;
+
+    // Since there are two sets, the first set will appear on the 1/2 line. The root and 
+    // second set will appear on the image's edges.
+    real branch_width = width / 2;
+    real branch_line_1 = branch_width;
+
+    // Determine how much vertical space each branch should use
+    real branch_1_height = (height - ((A.length -1) * branch_gap_1)) / A.length;
+    real branch_2_height = (branch_1_height - ((B.length - 1) * branch_gap_2)) / B.length;
+
+    // Handle the root location, which means we also have to consider the gaps between branches
+    pair root = (0, height / 2);
+    dot(root);
+
+    for(int i = 0; i < A.length; ++i){
+
+        // Determine where the label should be printed
+        real branch_1_top = height - (i * (branch_1_height + branch_gap_1));
+        pair element_1_location = (branch_line_1, branch_1_top - (branch_1_height / 2.0));
+        string element_1_string = A[i];
+        
+        // Draw the label for this element
+        draw(pic, root--(element_1_location + margin_label_1 * W));
+        dot(pic, element_1_location + margin_label_1 * W);
+        label(pic, element_1_string, element_1_location, p = label_size);
+
+        // Branch into the second set
+        for(int j = 0; j < B.length; ++j) {
+
+            // Determine where the label should be printed
+            real branch_2_top = branch_1_top - (j * (branch_2_height + branch_gap_2));
+            pair element_2_location = (width - margin, branch_2_top - (branch_2_height / 2.0));
+            string element_2_string = "(" + A[i] + "," + B[j] + ")";
+
+            // Draw the label
+            dot(pic, element_1_location + margin_label_1 * E);
+            draw(pic, (element_1_location + margin_label_1 * E)--(element_2_location + margin_label_2 * W));
+            dot(pic, element_2_location + margin_label_2 * W);
+            label(pic, element_2_string, element_2_location, p = label_size);
+
+        }
+
+    }
 }
 
 void arrow_diagram_2(
@@ -369,20 +555,6 @@ void arrow_diagram_3(
     label(pic, caption, (0, caption_zone_top - caption_zone_height / 2.0), p = caption_pen);
 }
 
-struct Proposition_1 {
-    string text_upper;
-    string text_lower;
-    proposition_1 value;
-    real weight;
-
-    void operator init(string text_upper, string text_lower, proposition_1 value, real weight) {
-        this.text_upper = text_upper;
-        this.text_lower = text_lower;
-        this.value = value;
-        this.weight = weight;
-    }
-};
-
 void truth_table_1(
     picture pic = currentpicture,
     real unit = 1cm,
@@ -584,20 +756,6 @@ void truth_table_1(
         }
     }
 }
-
-struct Proposition_2 {
-    string text_upper;
-    string text_lower;
-    proposition_2 value;
-    real weight;
-
-    void operator init(string text_upper, string text_lower, proposition_2 value, real weight) {
-        this.text_upper = text_upper;
-        this.text_lower = text_lower;
-        this.value = value;
-        this.weight = weight;
-    }
-};
 
 void truth_table_2(
     picture pic = currentpicture,
@@ -810,20 +968,6 @@ void truth_table_2(
         }
     }
 }
-
-struct Proposition_3 {
-    string text_upper;
-    string text_lower;
-    proposition_3 value;
-    real weight;
-
-    void operator init(string text_upper, string text_lower, proposition_3 value, real weight) {
-        this.text_upper = text_upper;
-        this.text_lower = text_lower;
-        this.value = value;
-        this.weight = weight;
-    }
-};
 
 void truth_table_3(
     picture pic = currentpicture,
@@ -1120,6 +1264,7 @@ void draw_real_function(
         p = function_color_1 + function_thickness,
         arrow = function_arrow
     );
+    clip(pic, box((0, 0), (plot_window.window_width, plot_window.window_height)));
 }
 
 void slope_field_1(
