@@ -37,7 +37,7 @@ real tick_size = 0.15;
 arrowbar axis_arrow = ArcArrows(size = 4);
 pen function_thickness = linewidth(1.2);
 arrowbar function_arrow = ArcArrows(SimpleHead, size = 3);
-pen label_size = fontsize(0.4cm);
+pen label_size = fontsize(0.45cm);
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Maximum Mathematics data types
