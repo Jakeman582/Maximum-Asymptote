@@ -395,9 +395,11 @@ struct RelationDiagram {
                 
                 // Draw horizontal line between set name zone and element zone
                 // Line width matches set name width, centered at set name position
+                // Cap endpoints to diagram edges with margin (larger for last set)
                 real set_name_width = estimate_text_width(this.set_names[i], header_2);
-                real line_left = set_pos.x - set_name_width / 2.0;
-                real line_right = set_pos.x + set_name_width / 2.0;
+                real margin = (i == this.num_sets - 1) ? 0.1 : 0.05;  // Larger margin for last set
+                real line_left = max(set_pos.x - set_name_width / 2.0, margin);
+                real line_right = min(set_pos.x + set_name_width / 2.0, width - margin);
                 draw(pic, (line_left, this.label_zone_bottom)--(line_right, this.label_zone_bottom), 
                      p=function_thickness);
             }
