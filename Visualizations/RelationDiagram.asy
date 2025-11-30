@@ -277,7 +277,8 @@ struct RelationDiagram {
         
         for (int i = 0; i < this.num_sets; ++i) {
             this.set_left_edges[i] = current_x;
-            this.set_right_edges[i] = current_x + overall_set_widths[i];
+            // Clamp right edge to diagram width to prevent overflow
+            this.set_right_edges[i] = min(current_x + overall_set_widths[i], width);
             set_center_x[i] = current_x + overall_set_widths[i] / 2.0;
             current_x = current_x + overall_set_widths[i] + spacing;
         }
