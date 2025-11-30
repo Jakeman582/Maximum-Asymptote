@@ -14,7 +14,7 @@ int rows = 9;
 int total_chars = length(sample_chars);
 
 // Spacing between characters (will be adjusted based on visual testing)
-real spacing = 1.0 * 2.0 / 3.0 * 0.9 * 0.9 * 0.9 * 0.9 * 2.0 * 0.85 * 0.9;  // Doubled from text_normal, then reduced by 15%, then 10%
+real spacing = 1.0 * 2.0 / 3.0 * 0.9 * 0.9 * 0.9 * 0.9 * 2.0 * 0.85 * 0.9 * 1.2;  // Doubled from text_normal, then reduced by 15%, then 10%, then increased by 20%
 
 unitsize(1cm);
 

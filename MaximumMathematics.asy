@@ -77,15 +77,15 @@ struct TypographyPen {
     }
 }
 
-// Header sizes (larger than text for visual distinction)
-TypographyPen header_1 = TypographyPen(fontsize(1.2cm), 0.669222);  // Determined from visual testing
-TypographyPen header_2 = TypographyPen(fontsize(1.0cm), 0.629856);  // Determined from visual testing
-TypographyPen header_3 = TypographyPen(fontsize(0.8cm), 0.52488);  // Determined from visual testing
+// Header sizes (larger than text for visual distinction) - using Helvetica Bold
+TypographyPen header_1 = TypographyPen(fontsize(1.2cm) + Helvetica("b"), 0.669222);  // Determined from visual testing
+TypographyPen header_2 = TypographyPen(fontsize(1.0cm) + Helvetica("b"), 0.629856);  // Determined from visual testing
+TypographyPen header_3 = TypographyPen(fontsize(0.8cm) + Helvetica("b"), 0.52488);  // Determined from visual testing
 
-// Text sizes
-TypographyPen text_large = TypographyPen(fontsize(0.65cm), 0.4374);  // Determined from visual testing
-TypographyPen text_normal = TypographyPen(fontsize(0.55cm), 0.354294);  // Determined from visual testing
-TypographyPen text_small = TypographyPen(fontsize(0.45cm), 0.314928);  // Determined from visual testing
+// Text sizes - using Courier
+TypographyPen text_large = TypographyPen(fontsize(0.65cm) + Courier(), 0.4374);  // Determined from visual testing
+TypographyPen text_normal = TypographyPen(fontsize(0.55cm) + Courier(), 0.354294);  // Determined from visual testing
+TypographyPen text_small = TypographyPen(fontsize(0.45cm) + Courier(), 0.314928);  // Determined from visual testing
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Include utilities
