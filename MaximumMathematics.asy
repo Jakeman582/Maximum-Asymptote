@@ -32,20 +32,34 @@ pen pruned_branch_color = RGB(255, 36, 0);
 // Maximum Mathematics figure design
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+// Graphing/axis styling
 pen axis_thickness = linewidth(1.5);
 real tick_size = 0.15;
 arrowbar axis_arrow = ArcArrows(size = 4);
-arrowbar ray_arrow = ArcArrow(size = 4);
-pen ray_beginning = linewidth(4);
 pen function_thickness = linewidth(1.2);
 arrowbar function_arrow = ArcArrows(SimpleHead, size = 3);
+
+// Arrow/ray styling (used by RelationDiagram and other diagram types)
+arrowbar ray_arrow = ArcArrow(size = 4);
+pen ray_beginning = linewidth(4);
+
+// General styling
 pen label_size = fontsize(0.45cm);
 
-// Line margin from set boundaries (used by RelationDiagram and other diagram types)
-real set_boundary_margin = 0.5;
+// Diagram layout constants (used by RelationDiagram and other diagram types)
+real set_boundary_margin = 0.5;  // Line margin from set boundaries
+real diagram_unit = 1cm;  // Unit size for diagrams
 
-// Unit size for diagrams (used by RelationDiagram and other diagram types)
-real diagram_unit = 1cm;
+// Zone layout constants (used by RelationDiagram and other diagram types)
+real label_zone_height = 2.0;  // Fixed height for label zones
+real element_zone_bottom_padding = 0.4;  // Padding at bottom to prevent label cutoff
+real element_zone_top_padding = 0.55;  // Padding below horizontal line (one font height for text_normal)
+
+// Arrow/relation drawing constants (used by RelationDiagram and other diagram types)
+real arrow_offset_amount = 0.15;  // Base offset amount for overlapping arrow targets
+real arrow_element_margin = 0.35;  // Margin from element labels for horizontal arrow segments
+real arrow_horizontal_length_max = 0.5;  // Maximum horizontal line length for arrows
+real arrow_horizontal_length_factor = 0.05;  // Horizontal line length as fraction of diagram width
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Maximum Mathematics typography
