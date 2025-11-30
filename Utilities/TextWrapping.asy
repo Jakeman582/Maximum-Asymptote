@@ -2,14 +2,11 @@
 // Text wrapping utility functions
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Estimate character width for text_normal font (0.55cm)
-// This is an approximation - actual width varies by character, but should be sufficient
-// for fixed-font caption text wrapping
-real estimate_char_width_normal = 0.25;  // Approximate width per character in cm for text_normal
-
 // Wrap text to fit within a given width
 // Returns an array of strings, one per line
-string[] wrap_text(string text, real max_width, real char_width = estimate_char_width_normal) {
+// Uses text_normal TypographyPen as the default
+string[] wrap_text(string text, real max_width, TypographyPen typo_pen = text_normal) {
+    real char_width = typo_pen.char_width_estimate > 0 ? typo_pen.char_width_estimate : 0.4374;
     if (length(text) == 0) {
         return new string[] {""};
     }

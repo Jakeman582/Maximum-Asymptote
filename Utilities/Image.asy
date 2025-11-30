@@ -341,13 +341,13 @@ struct Image {
             real title_x = content_left + title_width - separator_spacing;
             label(this.pic, this.caption_title_text, 
                   (title_x, title_y), 
-                  align=W, p=text_normal);
+                  align=W, p=text_normal.p);
         }
         
         // Render text: left-aligned, starting at separator (with wrapping)
         if (length(this.caption_text_text) > 0) {
             // Wrap text to fit within available width
-            string[] text_lines = wrap_text(this.caption_text_text, text_width);
+            string[] text_lines = wrap_text(this.caption_text_text, text_width, text_normal);
             
             // Calculate line spacing
             // Use line height of ~0.5cm (about 0.91x font size) for readable spacing without overlap
@@ -361,7 +361,7 @@ struct Image {
                 real line_y = text_top_y - i * line_height;
                 label(this.pic, text_lines[i], 
                       (content_left + title_width, line_y), 
-                      align=E, p=text_normal);
+                      align=E, p=text_normal.p);
             }
         }
     }

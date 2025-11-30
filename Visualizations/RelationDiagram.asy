@@ -2,10 +2,12 @@
 // RelationDiagram - Visual representation of relations between sets
 // 
 // Note: This file expects the following variables to be defined in the including scope:
-//   - header_2, text_normal (typography pens)
+//   - header_2, text_normal (TypographyPen structs)
 //   - function_thickness, ray_arrow, ray_beginning (arrow styling)
 //   - set_boundary_margin (margin from set boundaries for lines)
 //   - diagram_unit (unit size for diagrams, passed via render() method)
+//   - set_text_width() function (from Utilities/TextSetWidth.asy)
+//   - estimate_text_width() function (from Utilities/TextSetWidth.asy)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct RelationDiagram {
@@ -16,6 +18,9 @@ struct RelationDiagram {
     int num_sets;
     pair[][][] relations;  // relations[from][to] = array of pairs
     
+    // Debug mode
+    bool debug_mode;
+    
     // Layout state (calculated during render)
     pair[][] set_positions;
     pair[][] element_positions;
@@ -23,6 +28,8 @@ struct RelationDiagram {
     real[] set_right_edges;  // Right edge of each set
     real label_zone_bottom;  // Bottom of label zone
     real label_zone_top;  // Top of label zone
+    real element_zone_bottom;  // Bottom of element zone
+    real element_zone_top;  // Top of element zone
     
     // Constructor - empty diagram
     void operator init() {
@@ -35,6 +42,7 @@ struct RelationDiagram {
         this.element_positions = new pair[][];
         this.set_left_edges = new real[];
         this.set_right_edges = new real[];
+        this.debug_mode = false;
     }
     
     // Constructor - initialize with sets
@@ -75,6 +83,7 @@ struct RelationDiagram {
         this.element_positions = new pair[][];
         this.set_left_edges = new real[];
         this.set_right_edges = new real[];
+        this.debug_mode = false;
         
         // Initialize set widths (default: auto-calculate)
         this.set_widths = new real[this.num_sets];
@@ -145,6 +154,11 @@ struct RelationDiagram {
         this.set_widths[set_index] = width;
     }
     
+    // Enable or disable debug mode
+    void set_debug_mode(bool enabled) {
+        this.debug_mode = enabled;
+    }
+    
     // Helper: Count elements in a string array
     int count_elements(string[] arr) {
         int count = 0;
@@ -207,23 +221,23 @@ struct RelationDiagram {
         real element_zone_top = this.label_zone_bottom;  // Top of element zone
         real element_zone_bottom = 0;  // Bottom of element zone (bottom of diagram)
         
+        // Store element zone boundaries for debug visualization
+        this.element_zone_top = element_zone_top;
+        this.element_zone_bottom = element_zone_bottom;
+        
         // Calculate set widths (auto-calculate if not specified)
         real[] effective_widths = new real[this.num_sets];
         for (int i = 0; i < this.num_sets; ++i) {
             if (this.set_widths[i] > 0) {
                 effective_widths[i] = this.set_widths[i];
             } else {
-                // Auto-calculate based on widest element or set name
-                real max_width = 0.5;  // Minimum width
-                for (string elem : this.sets[i]) {
-                    real label_width = length(elem) * 0.3;
-                    max_width = max(max_width, label_width);
-                }
-                if (this.set_names[i] != "") {
-                    real name_width = length(this.set_names[i]) * 0.3;
-                    max_width = max(max_width, name_width);
-                }
-                effective_widths[i] = max_width;
+                // Auto-calculate based on widest element only
+                // Set names are in a different zone (label zone), so they don't affect element zone width
+                // Use set_text_width function to calculate width needed for element labels
+                real element_width = set_text_width(this.sets[i], text_normal);
+                
+                // Use calculated width directly, no padding
+                effective_widths[i] = element_width;
             }
         }
         
@@ -344,20 +358,30 @@ struct RelationDiagram {
             // Draw set name if provided (in label zone, centered)
             if (this.set_names[i] != "") {
                 label(pic, this.set_names[i], set_pos, 
-                      align=Center, p=header_2);
+                      align=Center, p=header_2.p);
             }
             
-            // Draw element labels (in element zone)
+            // Draw element labels (in element zone, positioned just inside left border of debug box)
             int j = 0;
             for (pair elem_pos : this.element_positions[i]) {
-                label(pic, this.sets[i][j], elem_pos, align=Center, p=text_normal);
+                // Estimate label width and push right by half (since center-aligned)
+                // This positions the left edge of the label at the border
+                real estimated_label_width = length(this.sets[i][j]) * text_normal.char_width_estimate;
+                real offset = estimated_label_width / 2.0;  // Half width for center alignment
+                pair label_pos = (this.set_left_edges[i] + offset, elem_pos.y);
+                label(pic, this.sets[i][j], label_pos, align=Center, p=text_normal.p);
                 j = j + 1;
             }
         }
     }
     
     // Draw arrows with offset support
-    void draw_arrows(picture pic, real unit) {
+    // Style: dot at source, small horizontal line, diagonal connection, small horizontal line, arrow at target
+    void draw_arrows(picture pic, real unit, real width) {
+        real element_margin = 0.35;  // Margin from element labels for horizontal segments
+        // Horizontal line length is 5% of diagram width, capped at 0.5 units
+        real horizontal_length = min(0.5, width * 0.05);
+        
         for (int i = 0; i < this.num_sets; ++i) {
             for (int j = 0; j < this.num_sets; ++j) {
                 pair[] pairs = this.relations[i][j];
@@ -398,25 +422,82 @@ struct RelationDiagram {
                     pair adjusted_src_elem = src_elem_pos + offset;
                     pair adjusted_tgt_elem = tgt_elem_pos + offset;
                     
-                    // Calculate line start/end points with margin from set boundaries
-                    // Always: left end = dot, right end = arrow (regardless of direction)
-                    pair left_point, right_point;
+                    // Calculate points for the connection style:
+                    // 1. Dot at source (pushed away from label)
+                    // 2. Small horizontal line from dot (protruding from element)
+                    // 3. Diagonal line connecting the two horizontal segments
+                    // 4. Small horizontal line to target element
+                    // 5. Arrow at the end
+                    pair dot_pos, src_horiz_start, src_horiz_end, tgt_horiz_start, tgt_horiz_end;
+                    
                     if (left_to_right) {
                         // From left set to right set
-                        left_point = (this.set_right_edges[i] + set_boundary_margin, adjusted_src_elem.y);
-                        right_point = (this.set_left_edges[j] - set_boundary_margin, adjusted_tgt_elem.y);
+                        // Dot is pushed to the right of the element label
+                        dot_pos = (adjusted_src_elem.x + element_margin, adjusted_src_elem.y);
+                        src_horiz_start = dot_pos;
+                        src_horiz_end = (adjusted_src_elem.x + element_margin + horizontal_length, adjusted_src_elem.y);
+                        // Target horizontal line is pushed to the left of the element label
+                        tgt_horiz_start = (adjusted_tgt_elem.x - element_margin - horizontal_length, adjusted_tgt_elem.y);
+                        tgt_horiz_end = (adjusted_tgt_elem.x - element_margin, adjusted_tgt_elem.y);
                     } else {
-                        // From right set to left set (but we want dot on left, arrow on right)
-                        left_point = (this.set_left_edges[j] + set_boundary_margin, adjusted_tgt_elem.y);
-                        right_point = (this.set_right_edges[i] - set_boundary_margin, adjusted_src_elem.y);
+                        // From right set to left set
+                        // Dot is pushed to the left of the element label
+                        dot_pos = (adjusted_src_elem.x - element_margin, adjusted_src_elem.y);
+                        src_horiz_start = dot_pos;
+                        src_horiz_end = (adjusted_src_elem.x - element_margin - horizontal_length, adjusted_src_elem.y);
+                        // Target horizontal line is pushed to the right of the element label
+                        tgt_horiz_start = (adjusted_tgt_elem.x + element_margin + horizontal_length, adjusted_tgt_elem.y);
+                        tgt_horiz_end = (adjusted_tgt_elem.x + element_margin, adjusted_tgt_elem.y);
                     }
                     
-                    // Draw dot at left end (use ray_beginning for size)
-                    dot(pic, left_point, p=ray_beginning);
-                    // Draw line with arrow only at right end (use ray_arrow)
-                    draw(pic, left_point--right_point, 
+                    // Draw dot at source (away from label)
+                    dot(pic, dot_pos, p=ray_beginning);
+                    
+                    // Draw small horizontal line from dot (no arrow)
+                    draw(pic, src_horiz_start--src_horiz_end, p=function_thickness);
+                    
+                    // Draw diagonal line connecting the two horizontal segments (no arrow)
+                    draw(pic, src_horiz_end--tgt_horiz_start, p=function_thickness);
+                    
+                    // Draw small horizontal line to target with arrow at end
+                    draw(pic, tgt_horiz_start--tgt_horiz_end, 
                          p=function_thickness, arrow=ray_arrow);
+                    
                     k = k + 1;
+                }
+            }
+        }
+    }
+    
+    // Draw debug visualization (boxes and lines)
+    void draw_debug(picture pic, real unit, real width, real height) {
+        if (!this.debug_mode) return;
+        
+        // Use a light gray pen for debug lines
+        pen debug_pen = gray + linewidth(0.5);
+        
+        // Draw horizontal line separating label zone from element zone
+        // Clamp to actual diagram width
+        real diagram_width = min(width, this.set_right_edges[this.num_sets - 1]);
+        draw(pic, (0, this.label_zone_bottom)--(diagram_width, this.label_zone_bottom), p=debug_pen);
+        
+        // Draw boxes around each set's element zone and vertical dividers
+        for (int i = 0; i < this.num_sets; ++i) {
+            real left_edge = this.set_left_edges[i];
+            real right_edge = min(this.set_right_edges[i], width);  // Clamp to diagram width
+            real bottom = this.element_zone_bottom;
+            real top = this.element_zone_top;
+            
+            // Only draw if within diagram bounds
+            if (left_edge <= width) {
+                // Draw box around element zone
+                path element_box = (left_edge, bottom)--(right_edge, bottom)--
+                                  (right_edge, top)--(left_edge, top)--cycle;
+                draw(pic, element_box, p=debug_pen);
+                
+                // Draw vertical divider at right edge of set (except for last set)
+                if (i < this.num_sets - 1 && right_edge <= width) {
+                    draw(pic, (right_edge, 0)--(right_edge, height), p=debug_pen);
                 }
             }
         }
@@ -438,7 +519,10 @@ struct RelationDiagram {
         draw_sets(pic, unit);
         
         // Draw arrows
-        draw_arrows(pic, unit);
+        draw_arrows(pic, unit, width);
+        
+        // Draw debug visualization if enabled
+        draw_debug(pic, unit, width, height);
         
         return pic;
     }

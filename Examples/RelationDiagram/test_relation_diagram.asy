@@ -25,6 +25,9 @@ diagram.add_relation(0, 1, new pair[] {(0,0), (1,1), (2,2)});
 // B→C: a→v, b→w, c→u
 diagram.add_relation(1, 2, new pair[] {(0,1), (1,2), (2,0)});
 
+// Enable debug mode to visualize zones and boundaries
+diagram.set_debug_mode(true);
+
 // Add diagram to image (automatically renders with new layout)
 // Set padding of 0.5 to prevent elements from being cut off at edges
 Image img = Image();

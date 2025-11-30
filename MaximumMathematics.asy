@@ -51,21 +51,34 @@ real diagram_unit = 1cm;
 // Maximum Mathematics typography
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Header sizes
-pen header_1 = fontsize(1.0cm);
-pen header_2 = fontsize(0.8cm);
-pen header_3 = fontsize(0.6cm);
+// Struct to tie typography pens with their character width estimates
+struct TypographyPen {
+    pen p;
+    real char_width_estimate;
+    
+    void operator init(pen pen_value, real char_width) {
+        this.p = pen_value;
+        this.char_width_estimate = char_width;
+    }
+}
+
+// Header sizes (larger than text for visual distinction)
+TypographyPen header_1 = TypographyPen(fontsize(1.2cm), 0.669222);  // Determined from visual testing
+TypographyPen header_2 = TypographyPen(fontsize(1.0cm), 0.629856);  // Determined from visual testing
+TypographyPen header_3 = TypographyPen(fontsize(0.8cm), 0.52488);  // Determined from visual testing
 
 // Text sizes
-pen text_large = fontsize(0.65cm);
-pen text_normal = fontsize(0.55cm);
-pen text_small = fontsize(0.45cm);
+TypographyPen text_large = TypographyPen(fontsize(0.65cm), 0.4374);  // Determined from visual testing
+TypographyPen text_normal = TypographyPen(fontsize(0.55cm), 0.354294);  // Determined from visual testing
+TypographyPen text_small = TypographyPen(fontsize(0.45cm), 0.314928);  // Determined from visual testing
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Include utilities
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 include "Utilities/TextWrapping.asy";
+include "Utilities/TextMeasurement.asy";
+include "Utilities/TextSetWidth.asy";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Include RelationDiagram
