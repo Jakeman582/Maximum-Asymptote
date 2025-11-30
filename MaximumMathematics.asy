@@ -20,6 +20,7 @@ pen table_sub_header = mediumgray;
 
 // Graphing colors
 pen axis_color = black;
+pen grid_color = mediumgray;
 pen function_color_1 = brand_color_1;
 pen function_color_2 = brand_color_2;
 pen slope_color_1 = gray;
@@ -34,7 +35,7 @@ pen pruned_branch_color = RGB(255, 36, 0);
 
 // Graphing/axis styling
 pen axis_thickness = linewidth(1.5);
-real tick_size = 0.15;
+pen grid_thickness = linewidth(0.2);
 arrowbar axis_arrow = ArcArrows(size = 4);
 pen function_thickness = linewidth(1.2);
 arrowbar function_arrow = ArcArrows(SimpleHead, size = 3);
