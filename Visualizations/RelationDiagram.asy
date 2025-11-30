@@ -479,21 +479,25 @@ struct RelationDiagram {
                     if (left_to_right) {
                         // From left set to right set
                         // Dot is at the right edge of source set's element subzone + margin
-                        dot_pos = (this.element_subzone_right_edges[i] + element_margin, adjusted_src_elem.y);
+                        // Clamp to diagram bounds (x <= width) to prevent drawing outside right edge
+                        dot_pos = (min(width, this.element_subzone_right_edges[i] + element_margin), adjusted_src_elem.y);
                         src_horiz_start = dot_pos;
-                        src_horiz_end = (this.element_subzone_right_edges[i] + element_margin + horizontal_length, adjusted_src_elem.y);
+                        src_horiz_end = (min(width, this.element_subzone_right_edges[i] + element_margin + horizontal_length), adjusted_src_elem.y);
                         // Target horizontal line is at the left edge of target set's element subzone - margin
-                        tgt_horiz_start = (this.element_subzone_left_edges[j] - element_margin - horizontal_length, adjusted_tgt_elem.y);
-                        tgt_horiz_end = (this.element_subzone_left_edges[j] - element_margin, adjusted_tgt_elem.y);
+                        // Clamp to diagram bounds (x >= 0) to prevent drawing outside left edge
+                        tgt_horiz_start = (max(0, this.element_subzone_left_edges[j] - element_margin - horizontal_length), adjusted_tgt_elem.y);
+                        tgt_horiz_end = (max(0, this.element_subzone_left_edges[j] - element_margin), adjusted_tgt_elem.y);
                     } else {
                         // From right set to left set
                         // Dot is at the left edge of source set's element subzone - margin
-                        dot_pos = (this.element_subzone_left_edges[i] - element_margin, adjusted_src_elem.y);
+                        // Clamp to diagram bounds (x >= 0) to prevent drawing outside left edge
+                        dot_pos = (max(0, this.element_subzone_left_edges[i] - element_margin), adjusted_src_elem.y);
                         src_horiz_start = dot_pos;
-                        src_horiz_end = (this.element_subzone_left_edges[i] - element_margin - horizontal_length, adjusted_src_elem.y);
+                        src_horiz_end = (max(0, this.element_subzone_left_edges[i] - element_margin - horizontal_length), adjusted_src_elem.y);
                         // Target horizontal line is at the right edge of target set's element subzone + margin
-                        tgt_horiz_start = (this.element_subzone_right_edges[j] + element_margin + horizontal_length, adjusted_tgt_elem.y);
-                        tgt_horiz_end = (this.element_subzone_right_edges[j] + element_margin, adjusted_tgt_elem.y);
+                        // Clamp to diagram bounds (x <= width) to prevent drawing outside right edge
+                        tgt_horiz_start = (min(width, this.element_subzone_right_edges[j] + element_margin + horizontal_length), adjusted_tgt_elem.y);
+                        tgt_horiz_end = (min(width, this.element_subzone_right_edges[j] + element_margin), adjusted_tgt_elem.y);
                     }
                     
                     // Draw dot at source (away from label)
