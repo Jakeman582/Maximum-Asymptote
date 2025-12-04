@@ -3,6 +3,9 @@ import three;
 
 unitsize(1cm);
 
+// Type alias for a real->real function used by visualizations
+using real_function_1 = real(real);
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Maximum Mathematics color palette
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -25,6 +28,8 @@ pen function_color_1 = brand_color_1;
 pen function_color_2 = brand_color_2;
 pen slope_color_1 = gray;
 pen slope_color_2 = mediumgray;
+pen fill_pen = opacity(0.18);
+pen outline_pen = linewidth(0.6);
 
 // Tree Diagram colors
 pen pruned_branch_color = RGB(255, 36, 0);
@@ -94,12 +99,14 @@ TypographyPen text_small = TypographyPen(fontsize(0.45cm) + Courier(), 0.314928)
 include "Utilities/TextWrapping.asy";
 include "Utilities/TextMeasurement.asy";
 include "Utilities/TextSetWidth.asy";
+include "Utilities/DefaultFunctions.asy";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Include RelationDiagram
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 include "Visualizations/RelationDiagram.asy";
+include "Visualizations/DiscreteGraph.asy";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Include utilities

@@ -460,5 +460,15 @@ struct Image {
         );
         add_visual(diagram_pic);
     }
+    
+    // Add DiscreteGraph directly
+    void add(DiscreteGraph diagram) {
+        picture diagram_pic = diagram.render(
+            get_diagram_width(),
+            get_diagram_height(),
+            diagram_unit
+        );
+        add_visual(diagram_pic);
+    }
 };
 
