@@ -470,5 +470,15 @@ struct Image {
         );
         add_visual(diagram_pic);
     }
+
+    // Add AccumulationTable directly
+    void add(AccumulationTable table) {
+        picture diagram_pic = table.render(
+            get_diagram_width(),
+            get_diagram_height(),
+            diagram_unit
+        );
+        add_visual(diagram_pic);
+    }
 };
 

@@ -28,7 +28,7 @@ pen function_color_1 = brand_color_1;
 pen function_color_2 = brand_color_2;
 pen slope_color_1 = gray;
 pen slope_color_2 = mediumgray;
-pen fill_pen = opacity(0.18);
+pen fill_pen = opacity(0.75);
 pen outline_pen = linewidth(0.6);
 
 // Tree Diagram colors
@@ -107,6 +107,7 @@ include "Utilities/DefaultFunctions.asy";
 
 include "Visualizations/RelationDiagram.asy";
 include "Visualizations/DiscreteGraph.asy";
+include "Visualizations/AccumulationTable.asy";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Include utilities
