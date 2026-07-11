@@ -2,6 +2,8 @@
 
 A comprehensive Asymptote library for creating professional mathematical diagrams and visualizations.
 
+> Note: Progress is resuming, and an effort is being made to turn most documentation into its own section of the Maximum Mathematics website, which is being reworked.
+
 ## Overview
 
 Maximum Mathematics provides a **declarative, unified architecture** for creating high-quality mathematical figures. The library features automatic rendering, zone management, gallery support, and sensible defaults at every level.
