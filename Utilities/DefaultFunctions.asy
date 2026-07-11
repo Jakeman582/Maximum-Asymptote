@@ -1,7 +1,12 @@
-// DefaultFunctions.asy
-// Small collection of default/simple functions used by visualizations.
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// File: DefaultFunctions.asy
+//
+// Description:
+// Provide simple default functions for common Asymptote visualizations.
+////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Identity function: real -> real
-real identity(real x) {
-    return x;
-}
+// Identity function
+real identity(real x) { return x; } // Returns the input unchanged
+
+// Squaring function
+real square(real x) { return x*x; } // Returns the square of the input
