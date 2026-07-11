@@ -24,8 +24,18 @@ Maximum Mathematics provides a **declarative, unified architecture** for creatin
 
 ### Installation
 
-1. Copy `MaximumMathematics.asy` to your Asymptote library path or project directory
-2. Import in your `.asy` files:
+Choose the installer for your operating system:
+
+- Linux or macOS: run `./install_library_linux_macos.sh`
+- Windows: run `install_library_windows.bat`
+
+These scripts install the library into Asymptote’s standard search path so you can use:
+
+```asy
+import MaximumMathematics;
+```
+
+If you prefer to install manually, you can also copy `MaximumMathematics.asy` to your Asymptote library path or project directory.
 
 ```asy
 import MaximumMathematics;
