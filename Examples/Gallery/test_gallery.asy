@@ -1,7 +1,7 @@
 import MaximumMathematics;
 
 // Create a gallery with 2 rows and 2 columns
-Gallery gallery = Gallery(2, 2, visual_width=4, visual_height=3);
+Gallery gallery = Gallery(2, 2, visual_width=4, visual_height=5);
 
 // Set gallery-wide settings
 gallery.set_margin(0.5);

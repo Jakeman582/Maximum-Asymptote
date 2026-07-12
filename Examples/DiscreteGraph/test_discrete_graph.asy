@@ -20,7 +20,7 @@ DiscreteGraph g = DiscreteGraph(dt, first_x, "left", periods, value_func);
 g.set_window(-0.5, periods + 0.5, 0, 0); // ymin==ymax triggers auto-compute in the struct
 // Optional: styling
 
-Image img = Image(12, 6);
+Image img = Image(16, 6);
 img.set_diagram_padding(0.5);
 img.caption_title("Figure");
 img.caption_text("Compound interest accumulation (discrete, per-period)");

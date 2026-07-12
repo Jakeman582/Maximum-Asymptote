@@ -1,7 +1,7 @@
 import MaximumMathematics;
 
 // Create a simple gallery with 1 row and 2 columns
-Gallery gallery = Gallery(1, 2, visual_width=3, visual_height=2);
+Gallery gallery = Gallery(1, 2, visual_width=3, visual_height=4);
 
 // Create a simple relation diagram
 RelationDiagram diagram = RelationDiagram();

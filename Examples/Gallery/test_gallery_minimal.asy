@@ -1,7 +1,7 @@
 import MaximumMathematics;
 
 // Minimal test - just one cell
-Gallery gallery = Gallery(1, 1, visual_width=3, visual_height=2);
+Gallery gallery = Gallery(1, 1, visual_width=3, visual_height=3);
 gallery.set_margin(0.5);
 gallery.set_padding(0.3);
 
