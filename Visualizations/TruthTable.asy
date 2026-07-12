@@ -137,8 +137,8 @@ struct TruthTable {
 
         // Floor for a column's content width: the widest body glyph, so a column is never narrower
         // than a single "0"/"1".
-        real cell_size = max(measure_text_width("0", text_normal.p),
-                             measure_text_width("1", text_normal.p));
+        real cell_size = max(measure_text_width("0", text_normal),
+                             measure_text_width("1", text_normal));
 
         // Collect every column's header label in left-to-right order (variables, then expressions).
         string[] header_labels = new string[column_count];
@@ -154,20 +154,20 @@ struct TruthTable {
         real[] natural_column_widths = new real[column_count];
         real natural_total_width = 0;
         for (int c = 0; c < column_count; ++c) {
-            real header_width = measure_text_width(header_labels[c], header_2.p);
+            real header_width = measure_text_width(header_labels[c], header_2);
             natural_column_widths[c] = max(header_width, cell_size) + 2 * horizontal_padding;
             natural_total_width += natural_column_widths[c];
         }
 
         // Natural row heights: the header row is sized to its tallest label (the larger header pen),
         // data rows to the body glyph. Kept as ratios and scaled below so the rows fill `height`.
-        real natural_header_height = measure_text_height("0", header_2.p);
+        real natural_header_height = measure_text_height("0", header_2);
         for (int c = 0; c < column_count; ++c) {
-            natural_header_height = max(natural_header_height, measure_text_height(header_labels[c], header_2.p));
+            natural_header_height = max(natural_header_height, measure_text_height(header_labels[c], header_2));
         }
         natural_header_height += 2 * vertical_padding;
-        real natural_data_height = max(measure_text_height("0", text_normal.p),
-                                       measure_text_height("1", text_normal.p)) + 2 * vertical_padding;
+        real natural_data_height = max(measure_text_height("0", text_normal),
+                                       measure_text_height("1", text_normal)) + 2 * vertical_padding;
         real natural_total_height = natural_header_height + rows * natural_data_height;
 
         // Fill the given box: scale the natural widths/heights so the table spans exactly
@@ -216,7 +216,7 @@ struct TruthTable {
         // Header row text (header_2 typography, centered horizontally and vertically in its cell).
         for (int c = 0; c < column_count; ++c) {
             real x_center = (column_left[c] + column_left[c + 1]) / 2;
-            label(pic, header_labels[c], (x_center, row_center(0)), p=header_2.p);
+            label(pic, header_labels[c], (x_center, row_center(0)), p=header_2);
         }
 
         // Data row text (text_normal typography, centered horizontally and vertically in its cell).
@@ -225,13 +225,13 @@ struct TruthTable {
             for (int c = 0; c < variable_count; ++c) {
                 real x_center = (column_left[c] + column_left[c + 1]) / 2;
                 label(pic, bool_to_text(this.variable_value(r, c)), (x_center, y_center),
-                      p=text_normal.p);
+                      p=text_normal);
             }
             for (int c = 0; c < expression_count; ++c) {
                 int column = variable_count + c;
                 real x_center = (column_left[column] + column_left[column + 1]) / 2;
                 label(pic, bool_to_text(this._results[c][r]), (x_center, y_center),
-                      p=text_normal.p);
+                      p=text_normal);
             }
         }
 

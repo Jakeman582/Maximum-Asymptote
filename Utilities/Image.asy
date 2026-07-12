@@ -38,7 +38,6 @@ struct Image {
     string caption_title_text;
     string caption_text_text;
     real caption_title_width_factor;
-    real caption_height;
     
     // Internal state
     picture pic;
@@ -71,9 +70,8 @@ struct Image {
         this.background_color = white;
         this.caption_title_text = "";
         this.caption_text_text = "";
-        this.caption_title_width_factor = 0.1;  // 10% for title, 90% for text
-        this.caption_height = 1.0;
-        
+        this.caption_title_width_factor = 0.2;  // 20% for title, 80% for text
+
         // Internal state
         this.pic = new picture;
         unitsize(this.pic, 1cm);
@@ -201,11 +199,7 @@ struct Image {
     void set_caption_title_width_factor(real factor) {
         this.caption_title_width_factor = factor;
     }
-    
-    void set_caption_height(real height) {
-        this.caption_height = height;
-    }
-    
+
     void set_debug_mode(bool enable) {
         this.debug_mode = enable;
     }
@@ -278,17 +272,49 @@ struct Image {
     bool has_caption() {
         return length(this.caption_title_text) > 0 || length(this.caption_text_text) > 0;
     }
-    
-    // Helper: Get caption zone height (0 if no caption)
-    real get_caption_zone_height() {
-        return has_caption() ? this.caption_height : 0;
-    }
-    
+
     // Helper: Get diagram zone dimensions
     real get_diagram_zone_width() {
         return this.width;
     }
-    
+
+    // Wrap the caption text to fit the current width and caption padding. Pure function of
+    // current state, safe to call more than once per render (e.g. once to size the caption
+    // zone, once to lay it out).
+    string[] get_wrapped_caption_lines() {
+        if (length(this.caption_text_text) == 0) return new string[];
+        real content_width = get_diagram_zone_width() - get_caption_padding_left() - get_caption_padding_right();
+        real text_width = content_width * (1.0 - this.caption_title_width_factor);
+        return wrap_text(this.caption_text_text, text_width, text_normal);
+    }
+
+    // Vertical space actually needed for the current caption content (title + wrapped text),
+    // not including caption padding.
+    real get_caption_content_height() {
+        if (!has_caption()) return 0;
+
+        real title_height = length(this.caption_title_text) > 0 ?
+            measure_text_height(this.caption_title_text, text_normal) : 0;
+
+        string[] text_lines = get_wrapped_caption_lines();
+        real first_line_height = text_lines.length > 0 ?
+            measure_text_height(text_lines[0], text_normal) : 0;
+
+        real row_height = max(title_height, first_line_height);
+        real line_height = 0.5;  // Matches the per-line spacing used when rendering wrapped lines
+        real extra_lines_height = text_lines.length > 1 ? (text_lines.length - 1) * line_height : 0;
+
+        return row_height + extra_lines_height;
+    }
+
+    // Helper: Get caption zone height (0 if no caption). Auto-sized to exactly fit the current
+    // caption content plus its padding, so the zone can't overflow or leave dead space regardless
+    // of image width, font size, or how many lines the text wraps to.
+    real get_caption_zone_height() {
+        if (!has_caption()) return 0;
+        return get_caption_content_height() + get_caption_padding_top() + get_caption_padding_bottom();
+    }
+
     real get_diagram_zone_height() {
         return this.height - get_caption_zone_height();
     }
@@ -329,46 +355,53 @@ struct Image {
         real content_bottom = caption_origin.y + get_caption_padding_bottom();
         real content_width = caption_zone_width - get_caption_padding_left() - get_caption_padding_right();
         real content_height = get_caption_zone_height() - get_caption_padding_top() - get_caption_padding_bottom();
-        
-        // Position at top of content area, but push down slightly to avoid border cutting text
-        // In Asymptote, y increases upward, so we subtract a small offset from the top
-        real text_baseline_offset = 0.2;  // Offset to push text down from top border
-        real content_top_y = content_bottom + content_height - text_baseline_offset;
-        
+
         // Split content width
         real title_width = content_width * this.caption_title_width_factor;
-        real text_width = content_width * (1.0 - this.caption_title_width_factor);
-        
+
         // Add small spacing before separator
         real separator_spacing = 0.03;
-        
+
+        // Wrap the caption text up front so its first line's height can be measured below —
+        // title and the first text line share one row. Reuses the same wrapping the zone was
+        // auto-sized from, so the content matches exactly what get_caption_zone_height() planned for.
+        string[] text_lines = get_wrapped_caption_lines();
+
+        // Position at top of content area. label() centers vertically on the point given, so the
+        // anchor is offset up by half the row's actual measured height — not a fixed guess — which
+        // is what guarantees the row stays within the content area regardless of font size or
+        // content (a fixed offset only happens to fit whichever font size it was tuned against).
+        real title_height = length(this.caption_title_text) > 0 ?
+            measure_text_height(this.caption_title_text, text_normal) : 0;
+        real first_line_height = text_lines.length > 0 ?
+            measure_text_height(text_lines[0], text_normal) : 0;
+        real row_height = max(title_height, first_line_height);
+        real content_top_y = content_bottom + content_height - row_height / 2;
+
         // Render title: right-aligned, ending slightly left of separator, just below top border
         real title_y = content_top_y;  // Position just below top border
         if (length(this.caption_title_text) > 0) {
             real title_x = content_left + title_width - separator_spacing;
-            label(this.pic, this.caption_title_text, 
-                  (title_x, title_y), 
-                  align=W, p=text_normal.p);
+            label(this.pic, this.caption_title_text,
+                  (title_x, title_y),
+                  align=W, p=text_normal);
         }
-        
+
         // Render text: left-aligned, starting at separator (with wrapping)
-        if (length(this.caption_text_text) > 0) {
-            // Wrap text to fit within available width
-            string[] text_lines = wrap_text(this.caption_text_text, text_width, text_normal);
-            
+        if (text_lines.length > 0) {
             // Calculate line spacing
             // Use line height of ~0.5cm (about 0.91x font size) for readable spacing without overlap
             real line_height = 0.5;
-            
+
             // Position first line at top (same y as title), subsequent lines below
             real text_top_y = content_top_y;
-            
+
             // Render each line (first line at top, subsequent lines below)
             for (int i = 0; i < text_lines.length; ++i) {
                 real line_y = text_top_y - i * line_height;
-                label(this.pic, text_lines[i], 
-                      (content_left + title_width, line_y), 
-                      align=E, p=text_normal.p);
+                label(this.pic, text_lines[i],
+                      (content_left + title_width, line_y),
+                      align=E, p=text_normal);
             }
         }
     }
@@ -468,8 +501,18 @@ struct Image {
         add_visual(diagram_pic);
     }
     
-    // Add DiscreteGraph directly
-    void add(DiscreteGraph diagram) {
+    // Add DiscretePlot directly
+    void add(DiscretePlot diagram) {
+        picture diagram_pic = diagram.render(
+            get_diagram_width(),
+            get_diagram_height(),
+            diagram_unit
+        );
+        add_visual(diagram_pic);
+    }
+
+    // Add Plot directly
+    void add(Plot diagram) {
         picture diagram_pic = diagram.render(
             get_diagram_width(),
             get_diagram_height(),

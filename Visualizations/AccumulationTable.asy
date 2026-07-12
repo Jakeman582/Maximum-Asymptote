@@ -102,7 +102,7 @@ struct AccumulationTable {
 
         // Draw header background
         fill(pic, box((origin_x, top_y - headerH), (origin_x + width, top_y)), function_color_1 + fill_pen);
-        label(pic, this._title, (origin_x + width / 2, top_y - headerH / 2), p=header_2.p);
+        label(pic, this._title, (origin_x + width / 2, top_y - headerH / 2), p=header_2);
 
         // Draw subheader background
         real sub_top = top_y - headerH;
@@ -118,10 +118,10 @@ struct AccumulationTable {
         real x4 = x3 + col3_w;
 
         // Draw subheader texts (centered in each cell horizontally)
-        label(pic, this._subheaders[0], (x0 + cell_padding, sub_top - subH / 2), align=E, p=text_normal.p);
-        label(pic, this._subheaders[1], (x1 + cell_padding, sub_top - subH / 2), align=E, p=text_normal.p);
-        label(pic, this._subheaders[2], (x2 + cell_padding, sub_top - subH / 2), align=E, p=text_normal.p);
-        label(pic, this._subheaders[3], (x3 + cell_padding, sub_top - subH / 2), align=E, p=text_normal.p);
+        label(pic, this._subheaders[0], (x0 + cell_padding, sub_top - subH / 2), align=E, p=text_normal);
+        label(pic, this._subheaders[1], (x1 + cell_padding, sub_top - subH / 2), align=E, p=text_normal);
+        label(pic, this._subheaders[2], (x2 + cell_padding, sub_top - subH / 2), align=E, p=text_normal);
+        label(pic, this._subheaders[3], (x3 + cell_padding, sub_top - subH / 2), align=E, p=text_normal);
 
         // Draw horizontal lines: top of header already filled; separator below subheader
         draw(pic, (x0, sub_top)--(x4, sub_top), p=outline_pen);      // header/subheader separator
@@ -151,8 +151,8 @@ struct AccumulationTable {
             // Text values
             string s0 = string(r);
             string s1 = _fmt(this._accum[r], 2);
-            label(pic, s0, c0, align=E, p=text_normal.p);
-            label(pic, s1, c1, align=E, p=text_normal.p);
+            label(pic, s0, c0, align=E, p=text_normal);
+            label(pic, s1, c1, align=E, p=text_normal);
 
             bool is_last_row = (r == rows - 1);
             if (is_last_row) {
@@ -173,8 +173,8 @@ struct AccumulationTable {
             } else {
                 string s2 = _fmt(this._accum[r + 1] - this._accum[r], 2);
                 string s3 = _fmt(this._accum[r + 1], 2);
-                label(pic, s2, c2, align=E, p=text_normal.p);
-                label(pic, s3, c3, align=E, p=text_normal.p);
+                label(pic, s2, c2, align=E, p=text_normal);
+                label(pic, s3, c3, align=E, p=text_normal);
             }
         }
 

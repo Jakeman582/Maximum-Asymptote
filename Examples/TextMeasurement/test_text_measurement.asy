@@ -53,7 +53,7 @@ for (int row = 0; row < rows; ++row) {
             draw(cell_box, p=gray + linewidth(0.3));
             
             // Draw the character (centered in cell)
-            label(ch, (cell_x + spacing / 2, cell_y - spacing / 2), p=text_normal.p, align=Center);
+            label(ch, (cell_x + spacing / 2, cell_y - spacing / 2), p=text_normal, align=Center);
             
             char_index = char_index + 1;
         }

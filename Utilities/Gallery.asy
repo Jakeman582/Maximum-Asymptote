@@ -199,7 +199,7 @@ struct Gallery {
             real title_x = content_left + title_width - separator_spacing;
             label(this.pic, this.caption_title_text, 
                   (title_x, title_y), 
-                  align=W, p=text_normal.p);
+                  align=W, p=text_normal);
         }
         
         // Render text: left-aligned, starting at separator (with wrapping)
@@ -219,7 +219,7 @@ struct Gallery {
                 real line_y = text_top_y - i * line_height;
                 label(this.pic, text_lines[i], 
                       (content_left + title_width, line_y), 
-                      align=E, p=text_normal.p);
+                      align=E, p=text_normal);
             }
         }
     }
@@ -258,7 +258,7 @@ struct Gallery {
         if (length(caption_label) > 0) {
             label(pic, caption_label, 
                   (content_center_x, content_y), 
-                  align=Center, p=text_small.p);
+                  align=Center, p=text_small);
         }
     }
     

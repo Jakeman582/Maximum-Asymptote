@@ -4,11 +4,11 @@
 
 // Wrap text to fit within a given width (in cm)
 // Returns an array of strings, one per line
-// Uses text_normal TypographyPen as the default.
+// Uses text_normal as the default pen.
 // Line widths are measured by typesetting each candidate line through LaTeX
 // (measure_text_size), so wrapping respects the true proportional glyph widths
 // of the pen's font rather than a flat per-character estimate.
-string[] wrap_text(string text, real max_width, TypographyPen typo_pen = text_normal) {
+string[] wrap_text(string text, real max_width, pen typo_pen = text_normal) {
     if (length(text) == 0) {
         return new string[] {""};
     }
@@ -35,7 +35,7 @@ string[] wrap_text(string text, real max_width, TypographyPen typo_pen = text_no
         }
         
         // Measure the true rendered width of the candidate line
-        real test_width = measure_text_size(test_line, typo_pen.p).x;
+        real test_width = measure_text_size(test_line, typo_pen).x;
         
         // If line would exceed max width, start a new line
         if (test_width > max_width && length(current_line) > 0) {

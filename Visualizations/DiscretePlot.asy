@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-// DiscreteGraph - Draws a sequence of adjacent rectangles (discrete bars)
+// DiscretePlot - Draws a sequence of adjacent rectangles (discrete bars)
 //
 // Features:
 // - User-configurable step size (`dx`) and number of steps
@@ -10,45 +10,7 @@
 //   with `Image.add()` (same pattern as `RelationDiagram`)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Helper: compute a "nice" tick spacing using 1,2,5 multiples
-real niceNumber(real range) {
-    if (range <= 0) return 0;
-    real exponent = floor(log(range) / log(10));
-    int e = (int)exponent;
-    real pow10 = 1;
-    if (e >= 0) {
-        for (int i = 0; i < e; ++i) pow10 = pow10 * 10;
-    } else {
-        for (int i = 0; i < -e; ++i) pow10 = pow10 / 10;
-    }
-    real f = range / pow10;
-    real nf;
-    if (f < 1.5) nf = 1;
-    else if (f < 3) nf = 2;
-    else if (f < 7) nf = 5;
-    else nf = 10;
-    return nf * pow10;
-}
-
-// Compute tick positions between lo and hi with target ~n ticks
-real[] compute_ticks(real lo, real hi, int n) {
-    real[] ticks = new real[];
-    if (hi <= lo) return ticks;
-    real range = hi - lo;
-    real rawStep = range / max(1, n - 1);
-    real step = niceNumber(rawStep);
-    if (step == 0) return ticks;
-    real first = ceil(lo / step) * step;
-    for (real t = first; t <= hi + 1e-12; t += step) {
-        ticks.push(t);
-        // safety: break if too many
-        if (ticks.length > n * 4) break;
-    }
-    return ticks;
-}
-
-
-struct DiscreteGraph {
+struct DiscretePlot {
     // Private/internal fields (users should access via getters/setters)
     real _dx;
     real _first_x;
@@ -202,63 +164,6 @@ struct DiscreteGraph {
     // Convenience: call the stored function at x and return the value.
     real call_function_at(real x) {
         return this._func(x);
-    }
-
-    // Sample a user function at the center of each rectangle
-    void sample_with_function(real_function_1 func) {
-        this._heights = new real[this._steps];
-        for (int k = 0; k < this._steps; ++k) {
-            real left, right, center;
-            if (this._anchor == "left") {
-                left = this._first_x + k * this._dx;
-                right = left + this._dx;
-            } else if (this._anchor == "right") {
-                right = this._first_x + k * this._dx;
-                left = right - this._dx;
-            } else {
-                center = this._first_x + k * this._dx;
-                left = center - this._dx / 2.0;
-                right = center + this._dx / 2.0;
-            }
-            center = (left + right) / 2.0;
-            // Sample at the anchor point: left | center | right
-            real sample_x;
-            if (this._anchor == "left") sample_x = left;
-            else if (this._anchor == "right") sample_x = right;
-            else sample_x = center;
-            this._heights[k] = func(sample_x);
-        }
-
-        // Auto-compute windows if not provided (xmin==xmax treated as unset)
-        if (this._xmax == this._xmin) {
-            real left0, rightN;
-            if (this._anchor == "left") {
-                left0 = this._first_x;
-                rightN = this._first_x + this._steps * this._dx;
-            } else if (this._anchor == "right") {
-                left0 = this._first_x - this._dx;
-                rightN = this._first_x + (this._steps - 1) * this._dx;
-            } else {
-                left0 = this._first_x - this._dx / 2.0;
-                rightN = this._first_x + (this._steps - 1) * this._dx + this._dx / 2.0;
-            }
-            this._xmin = left0;
-            this._xmax = rightN;
-        }
-
-        if (this._ymax == this._ymin) {
-            real hmin = 1e9;
-            real hmax = -1e9;
-            for (real h : this._heights) {
-                if (h < hmin) hmin = h;
-                if (h > hmax) hmax = h;
-            }
-            if (hmin > 0) hmin = 0; // include baseline
-            real pad = (hmax - hmin) * 0.1;
-            if (pad == 0) pad = 1;
-            this._ymin = hmin - pad;
-            this._ymax = hmax + pad;
-        }
     }
 
     // Render the diagram into a picture; uses global styling pens
@@ -415,7 +320,7 @@ struct DiscreteGraph {
             // tick direction: to the right for left-edge axis, to the right for x=0 too
             draw(pic, (ax_m, ym)--(ax_m + tickLenX, ym), p=axis_color + axis_thickness);
             // label: align to the west of the tick (centered vertically)
-            label(pic, string(t), (ax_m - tickLenX - labelOffsetX, ym), align=W, p=text_small.p);
+            label(pic, string(t), (ax_m - tickLenX - labelOffsetX, ym), align=W, p=text_small);
         }
 
         // Horizontal axis: use y=0 if inside, otherwise use bottom edge (ymin)
@@ -426,7 +331,7 @@ struct DiscreteGraph {
             real xm = mapx(t);
             draw(pic, (xm, ay_m)--(xm, ay_m + tickLenY), p=axis_color + axis_thickness);
             // horizontal tick labels: centered below the tick (south)
-            label(pic, string(t), (xm, ay_m - tickLenY - labelOffsetY), align=S, p=text_small.p);
+            label(pic, string(t), (xm, ay_m - tickLenY - labelOffsetY), align=S, p=text_small);
         }
 
         // Debug: draw window border
@@ -437,5 +342,3 @@ struct DiscreteGraph {
         return pic;
     }
 };
-
-// (No default identity overload here — callers should pass a `real_function_1` explicitly.)

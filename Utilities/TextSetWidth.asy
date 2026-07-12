@@ -1,30 +1,22 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // TextSetWidth - Calculate width needed for a set of labels
-// 
+//
 // Note: This file expects the following to be defined in the including scope:
-//   - TypographyPen struct
+//   - measure_text_size() function (from Utilities/TextMeasurement.asy)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Estimate text width using a TypographyPen struct
-// This ensures the pen and its spacing estimate are always used together
-real estimate_text_width(string text, TypographyPen typo_pen) {
+// Measure the true rendered width of text using a given pen
+real estimate_text_width(string text, pen typo_pen) {
     if (length(text) == 0) {
         return 0;
     }
-    
-    // Use the char_width_estimate from the struct if available
-    if (typo_pen.char_width_estimate > 0) {
-        return length(text) * typo_pen.char_width_estimate;
-    }
-    
-    // Fallback: simple estimate if char_width_estimate not set
-    return length(text) * 0.4;
+
+    return measure_text_size(text, typo_pen).x;
 }
 
 // Calculate the width needed for a set of labels
 // Returns the width needed to accommodate the largest string in the array
-// Uses the TypographyPen's char_width_estimate for consistent spacing
-real set_text_width(string[] strings, TypographyPen typo_pen) {
+real set_text_width(string[] strings, pen typo_pen) {
     if (strings.length == 0) {
         return 0;
     }

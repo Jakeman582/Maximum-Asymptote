@@ -86,7 +86,7 @@ A visualization is laid out to **fill the image's content area** (the image size
 | **Margins** (outside the canvas) | `set_margin(m)`, `set_margin_horizontal(m)`, `set_margin_vertical(m)`, `set_margin_left/right/top/bottom(m)` |
 | **Diagram padding** (inside the canvas, around the visualization) | `set_diagram_padding(p)`, `set_diagram_padding_horizontal/vertical(p)`, `set_diagram_padding_left/right/top/bottom(p)` |
 | **Caption padding** (inside the caption zone) | `set_caption_padding(p)`, `set_caption_padding_horizontal/vertical(p)`, `set_caption_padding_left/right/top/bottom(p)` |
-| **Caption** | `caption_title(text)`, `caption_text(text)`, `set_caption_height(h)`, `set_caption_title_width_factor(f)` |
+| **Caption** | `caption_title(text)`, `caption_text(text)`, `set_caption_title_width_factor(f)` — the caption zone's height is auto-sized to fit its content |
 | **Background** | `set_background_color(pen)` |
 | **Debug** | `set_debug_mode(bool)` |
 | **Add + render** | `add(visualization)` |
@@ -101,11 +101,12 @@ A caption has two optional parts laid out side by side: a right-aligned **title*
 Image img = Image(12, 8);
 img.caption_title("Figure 2:");
 img.caption_text("The distribution of outcomes across the sample space.");
-img.set_caption_height(1.2);
 img.add(diagram);
 ```
 
 Provide only `caption_title`, only `caption_text`, or both. Provide neither and no caption zone is created. Both parts support LaTeX math.
+
+The caption zone's height is **auto-sized** to exactly fit the current caption content — measured from the actual rendered title and text (including how many lines the text wraps into at the image's width), plus caption padding. The diagram zone always gets the remainder of the image height. There's no manual height to set or tune: change the caption text, the image width (which changes how the text wraps), or `set_caption_padding(p)` for breathing room, and the zone resizes itself accordingly.
 
 ---
 
@@ -193,14 +194,117 @@ img.add(table);
 
 `func` has type `real_function_1` (`real(real)`) and maps the current total to the next total.
 
-### DiscreteGraph
+### Plot
+
+A standard continuous function graph — the smooth curve you'd see in a high-school or calc 1/2 class, as opposed to `DiscretePlot`'s discrete bars below. Add one or more functions with `add()`; colors are assigned automatically once every function is in place: the seven-color rainbow (ROYGBIV) gradient is divided into as many zones as there are functions, and each function takes its zone's middle color.
+
+`Plot` is a `typedef` alias for the underlying `ContinuousPlot` struct — the two names are fully interchangeable everywhere (variables, parameters, `Plot(...)`/`ContinuousPlot(...)` construction). Use whichever reads better; this doc uses `Plot`.
+
+```asy
+real cube(real x) { return x*x*x; }
+
+Plot p = Plot(-4, 4);        // x-domain: the range functions are evaluated over
+p.add(square);
+p.add(cube);
+
+Image img = Image(10, 8);
+img.set_diagram_padding(0.5);
+img.caption_title("Figure 4:");
+img.caption_text("$x^2$ and $x^3$ over [-4, 4].");
+img.add(p);
+```
+
+| Method | Purpose |
+|---|---|
+| `Plot(x_min=-5, x_max=5)` | Build the plot with an x-domain |
+| `add(func, color=AUTO_COLOR, type=SOLID, left_marker=AUTO, right_marker=AUTO)` | Add a function |
+| `set_x_min / set_x_max(real)` | Change the domain — the range functions are evaluated over |
+| `set_window_left / set_window_right / set_window_bottom / set_window_top(real)` | Override one viewport edge |
+| `set_window(left, right, bottom, top)` | Set all four viewport edges at once |
+| `set_grid_delta_x / set_grid_delta_y(real)` | Change one grid spacing |
+| `set_grid(delta_x=1, delta_y=1)` | Set both grid spacings and turn the grid on |
+| `set_grid_mode(bool)` | Turn the grid on/off without changing its spacing |
+| `set_debug_mode(bool)` | Draw bounds |
+
+The **domain** (`x_min`/`x_max`) is where the curve exists at all — it won't extend past this even if the window is wider. The **window** (`left`/`right`/`bottom`/`top`) is the viewport: left/right default to the domain, and bottom/top are always auto-computed from the sampled y-values (with padding) unless you override them.
+
+`func` has type `real_function_1` (`real(real)`).
+
+**Colors.** By default every added function is auto-colored from the rainbow palette (see [Styling and typography](#styling-and-typography)). Pass any ordinary Asymptote pen — a named color, `RGB(...)`, `rgb(...)`, etc. — as `add()`'s `color` argument to color-coordinate a specific function instead:
+
+```asy
+Plot p = Plot(-3, 3);
+p.add(f, color=red);  // f keeps exactly this color
+p.add(g);              // g and h are auto-colored, dividing the rainbow between just the two of them
+p.add(h);
+```
+
+An explicitly colored function is excluded from the rainbow's zone count entirely — the remaining auto-colored functions still spread across the full gradient among themselves, rather than losing a slot to a color they don't use.
+
+**Line types.** Pass `type` on `add()` to set the curve's dash pattern — one of the constants below, or any other Asymptote linetype pen. `type` is independent of `color`, so you can set a line type on an auto-colored function without also having to pin down its color:
+
+| Constant | Pattern |
+|---|---|
+| `SOLID` | Solid (default) |
+| `DOTTED` | Dotted |
+| `DASHED` | Dashed |
+| `LONG_DASHED` | Long dashes |
+| `DASH_DOTTED` | Dash-dot |
+| `LONG_DASH_DOTTED` | Long dash-dot |
+
+```asy
+p.add(f, type=DASHED);                 // auto color, dashed
+p.add(g, color=red, type=DOTTED);      // explicit color and type
+```
+
+**Always pass `color` and `type` by name (`color=...`, `type=...`).** They're both plain `pen` values in the same `add(func, color=AUTO_COLOR, type=SOLID, ...)` signature, so Asymptote can only tell them apart by position or by name — `color` is the first `pen` slot, so a bare positional pen always fills `color`, never `type`. Writing `p.add(f, DASHED)` intending "set the line type" actually sets `color=DASHED`, which silently renders as a solid black curve (`DASHED` carries no color of its own) rather than the dashed line you meant — no compile error, just the wrong picture. Naming both arguments sidesteps this entirely, in any order:
+
+```asy
+p.add(f, type=DASHED);                  // fine: only type given, named
+p.add(f, DASHED);                        // WRONG: silently sets color, not type
+p.add(f, type=DASHED, color=red);       // fine: order doesn't matter once named
+```
+
+The line type applies only to the curve itself — endpoint markers (dots, interval brackets) are always drawn with a solid outline regardless.
+
+**Axes.** Drawn at `x=0`/`y=0` when that's inside the window, otherwise at the nearest window edge, each tipped with an arrowhead and labeled with tick values. When both axes actually cross at the origin, its tick label would otherwise be printed twice — once from each axis, right next to one another — so it's suppressed on both and replaced with a single `"0"` label tucked diagonally into whichever quadrant encloses the least area (so it lands somewhere already empty rather than overlapping a curve).
+
+**Grid.** Off by default. `set_grid(delta_x, delta_y)` turns it on and sets the spacing in one call — both default to `1`. Grid lines start at the axes (wherever they actually are — the window edge if 0 isn't in view, same as the axes themselves) and extend outward every `delta_x`/`delta_y`; the axis's own position isn't redrawn as a grid line. Drawn in the theme's `grid_color`/`grid_thickness`, underneath the curves and axes.
+
+```asy
+Plot p = Plot(-3, 3);
+p.add(square);
+p.set_grid();              // spacing 1, 1
+p.set_grid(0.5, 2);        // override: spacing 0.5 in x, 2 in y
+p.set_grid_mode(false);    // turn it back off without losing the spacing
+```
+
+**Endpoint markers.** A function's true leftmost and rightmost *visible* points — wherever the curve actually starts and ends, whether that's the domain edge, a window boundary, or a gap where the function is undefined (e.g. `log`/`sqrt` of a negative number) — get a marker, by default (`AUTO`) an arrowhead. Every other cut in between — an interior window-boundary crossing, or resuming after a gap partway through the domain — always draws with no marker, regardless of `left_marker`/`right_marker`; only the two true outermost ends are ever eligible for one. Override `left_marker`/`right_marker` on `add()` when `ARROW` isn't right for a specific function — e.g. a closed dot for `sqrt(x)` at `x=0`, since it's actually defined and finite there rather than continuing further:
+
+| Constant | Left end | Right end |
+|---|---|---|
+| `ARROW` (default) | Arrow pointing left | Arrow pointing right |
+| `OPEN_DOT` | Hollow circle | Hollow circle |
+| `CLOSED_DOT` | Filled circle | Filled circle |
+| `OPEN_INTERVAL` | `(` | `)` |
+| `CLOSED_INTERVAL` | `[` | `]` |
+| `NONE` | Nothing | Nothing |
+
+```asy
+Plot p = Plot(-2, 10);
+p.add(sqrt, left_marker=CLOSED_DOT);  // sqrt(0)=0 is defined, unlike AUTO's default arrow implies
+```
+
+These only apply to a function's overall first and last visible point. Any other cut in the middle of the curve — a window-boundary crossing, or resuming after an internal gap — always uses the ordinary `AUTO` behavior regardless of what you pass here.
+
+### DiscretePlot
 
 A discrete step/bar plot sampling a function at the left, middle, or right of each interval — useful for Riemann-sum and accumulation illustrations.
 
 ```asy
 real value(real x) { return 1000 * exp(log(1.05) * x); }
 
-DiscreteGraph g = DiscreteGraph(1, 0, "left", 8, value);
+DiscretePlot g = DiscretePlot(1, 0, "left", 8, value);
 g.set_window(-0.5, 8.5, 0, 0);   // ymin == ymax => auto-compute the y-window
 
 Image img = Image(12, 6);
@@ -212,7 +316,7 @@ img.add(g);
 
 | Method | Purpose |
 |---|---|
-| `DiscreteGraph(dx=1, first_x=0, anchor="left", steps=10, func=identity, xmin=0, xmax=0, ymin=0, ymax=0)` | Build and sample |
+| `DiscretePlot(dx=1, first_x=0, anchor="left", steps=10, func=identity, xmin=0, xmax=0, ymin=0, ymax=0)` | Build and sample |
 | `set_dx / set_first_x / set_steps(...)` | Change sampling geometry |
 | `set_anchor("left"\|"mid"\|"right")` | Where each interval is sampled |
 | `set_function(func)` | Replace the function and re-sample |
@@ -305,12 +409,12 @@ asy -f svg mydiagram.asy     # force SVG
 
 ## Styling and typography
 
-Global pens, colors, and typography are defined in `MaximumMathematics.asy` and shared by every visualization:
+Global pens, colors, and typography are defined in `Theme/MaximumMathematicsTheme.asy` and shared by every visualization. `MaximumMathematics.asy` itself is just an aggregator — it includes the theme and every module, with no styling of its own. Swap in an alternate theme file to restyle the whole library without touching visualization code.
 
 - **Brand colors:** `brand_color_1` (blue), `brand_color_2` (orange)
 - **Table colors:** `table_header`, `table_sub_header`
-- **Graph colors:** `axis_color`, `grid_color`, `function_color_1`, `function_color_2`
-- **Typography:** `header_1`, `header_2`, `header_3`, `text_large`, `text_normal`, `text_small` — each a `TypographyPen` whose pen is its `.p` field
+- **Graph colors:** `axis_color`, `grid_color`, `function_color_1`, `function_color_2` — `Plot` colors its functions via `plot_function_colors(n)`, which sweeps hue from red to violet in HSV space
+- **Typography:** `header_1`, `header_2`, `header_3`, `text_large`, `text_normal`, `text_small` — plain `pen`s, usable anywhere a pen is expected (e.g. `header_2 + bold`)
 
 Full Asymptote color and pen support is available for anything you pass to a setter (for example `img.set_background_color(rgb(0.98, 0.98, 1.0))`).
 
@@ -320,7 +424,10 @@ Full Asymptote color and pen support is available for anything you pass to a set
 
 ```
 Maximum-Asymptote/
-├── MaximumMathematics.asy        # Entry point: colors, typography, includes everything
+├── MaximumMathematics.asy        # Entry point: includes the theme and every module
+│
+├── Theme/
+│   └── MaximumMathematicsTheme.asy  # Colors, pens, layout constants, typography
 │
 ├── Utilities/
 │   ├── TextWrapping.asy          # Caption/text wrapping
@@ -328,6 +435,7 @@ Maximum-Asymptote/
 │   ├── TextSetWidth.asy          # Set-width helpers
 │   ├── FunctionTypes.asy         # Function type aliases (real_function_1, ...)
 │   ├── DefaultFunctions.asy      # identity, square
+│   ├── AxisTicks.asy             # Shared tick computation (Plot, DiscretePlot)
 │   ├── Image.asy                 # Image: canvas, zones, captions, auto-render
 │   └── Gallery.asy               # Gallery: grid layout
 │
@@ -335,7 +443,8 @@ Maximum-Asymptote/
 │   ├── RelationDiagram.asy
 │   ├── TruthTable.asy
 │   ├── AccumulationTable.asy
-│   └── DiscreteGraph.asy
+│   ├── ContinuousPlot.asy        # Plot is a typedef alias for ContinuousPlot
+│   └── DiscretePlot.asy
 │
 └── Examples/                     # Runnable examples, grouped by visualization
 ```

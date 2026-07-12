@@ -2,7 +2,7 @@
 // RelationDiagram - Visual representation of relations between sets
 // 
 // Note: This file expects the following variables to be defined in the including scope:
-//   - header_2, text_normal (TypographyPen structs)
+//   - header_2, text_normal (typography pens)
 //   - function_thickness, ray_arrow, ray_beginning (arrow styling)
 //   - set_boundary_margin (margin from set boundaries for lines)
 //   - diagram_unit (unit size for diagrams, passed via render() method)
@@ -10,6 +10,7 @@
 //   - arrow_offset_amount, arrow_element_margin, arrow_horizontal_length_max, arrow_horizontal_length_factor (arrow constants)
 //   - set_text_width() function (from Utilities/TextSetWidth.asy)
 //   - estimate_text_width() function (from Utilities/TextSetWidth.asy)
+//   - measure_text_size() function (from Utilities/TextMeasurement.asy)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct RelationDiagram {
@@ -391,7 +392,7 @@ struct RelationDiagram {
                 // Set name is centered at set_center_x, which is already calculated
                 // to be the center of the set zone, so no adjustment needed
                 label(pic, this.set_names[i], set_pos, 
-                      align=Center, p=header_2.p);
+                      align=Center, p=header_2);
                 
                 // Draw horizontal line between set name zone and element zone
                 // Line width matches set name width, centered at set name position
@@ -409,10 +410,10 @@ struct RelationDiagram {
             for (pair elem_pos : this.element_positions[i]) {
                 // Estimate label width and push right by half (since center-aligned)
                 // This positions the left edge of the label at the element subzone border
-                real estimated_label_width = length(this.sets[i][j]) * text_normal.char_width_estimate;
+                real estimated_label_width = measure_text_size(this.sets[i][j], text_normal).x;
                 real offset = estimated_label_width / 2.0;  // Half width for center alignment
                 pair label_pos = (this.element_subzone_left_edges[i] + offset, elem_pos.y);
-                label(pic, this.sets[i][j], label_pos, align=Center, p=text_normal.p);
+                label(pic, this.sets[i][j], label_pos, align=Center, p=text_normal);
                 j = j + 1;
             }
         }
