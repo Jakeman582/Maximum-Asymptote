@@ -28,6 +28,3 @@ gallery.add(red_square, 0, 0, "(a)");
 gallery.add(blue_square, 0, 1, "(b)");
 gallery.add(green_square, 1, 0, "(c)");
 gallery.add(yellow_square, 1, 1, "(d)");
-
-// Gallery automatically renders!
-gallery.render();

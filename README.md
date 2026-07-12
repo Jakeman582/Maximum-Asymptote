@@ -2,811 +2,348 @@
 
 A comprehensive Asymptote library for creating professional mathematical diagrams and visualizations.
 
-> Note: Progress is resuming, and an effort is being made to turn most documentation into its own section of the Maximum Mathematics website, which is being reworked.
-
-## Overview
-
-Maximum Mathematics provides a **declarative, unified architecture** for creating high-quality mathematical figures. The library features automatic rendering, zone management, gallery support, and sensible defaults at every level.
-
-### Key Features
-
-✨ **Declarative API** - Describe what you want, not how to render it  
-🎨 **Automatic Rendering** - No explicit output calls needed  
-📐 **Zone Management** - Automatic layouts with captions and margins  
-📏 **CSS-like Margins** - Flexible margin control with familiar specificity rules  
-🖼️ **Gallery Support** - Arrange multiple diagrams in grids  
-🎯 **Sensible Defaults** - Minimal configuration required  
-♻️ **Backward Compatible** - All legacy code still works  
+> Development is active. Documentation is gradually moving to the Maximum Mathematics website, which is being reworked; this README is the current source of truth for the API.
 
 ---
 
-## Quick Start
+## Design philosophy
 
-### Installation
+Every figure follows the same path:
 
-Choose the installer for your operating system:
+1. **Create a visualization** and configure its data (constructor + fluent methods).
+2. **Create an `Image`** and configure it with setter methods (size, margins, padding, caption, background).
+3. **Add the visualization to the image** with `image.add(visualization)`.
 
-- Linux or macOS: run `./install_library_linux_macos.sh`
-- Windows: run `install_library_windows.bat`
-
-These scripts are the recommended option for most users because they install the full library layout into Asymptote’s standard search path so you can use:
-
-```asy
-import MaximumMathematics;
-```
-
-If you prefer to install manually, you must copy the full library layout so that the main file and its supporting folders remain together. In practice, that means placing `MaximumMathematics.asy` alongside the `Utilities/` and `Visualizations/` directories, preserving their relative structure.
-
-```asy
-import MaximumMathematics;
-```
-
-### Simplest Example
+That last step **renders automatically** — you never call a render, draw, or output function yourself. The only exception is the escape hatch: if you want the bare visualization *without* an enclosing image, you call the visualization's own `render(width, height, unit)` directly (see [Standalone rendering](#standalone-rendering)).
 
 ```asy
 import MaximumMathematics;
 
-string[] A = {"H", "T"};
-string[] B = {"B", "R"};
+// 1. Create + configure a visualization
+RelationDiagram diagram = RelationDiagram();
+diagram.add_set(new string[] {"1", "2", "3"}, "A");
+diagram.add_set(new string[] {"a", "b", "c"}, "B");
+diagram.add_relation(0, 1, new pair[] {(0,0), (1,1), (2,2)});
 
-TreeDiagram tree = TreeDiagram(new string[][] {A, B});
-Image().add(tree);
+// 2. Create + configure an image
+Image img = Image();
+img.set_diagram_padding(0.5);
+img.caption_title("Figure 1:");
+img.caption_text("A bijection between two sets.");
+
+// 3. Add — this renders automatically
+img.add(diagram);
 ```
 
-Run with: `asy myfile.asy`
-
-That's it! This creates a complete tree diagram with automatic rendering.
+There are no configuration structs and no wrapper types: you configure everything through setter methods on the object itself.
 
 ---
 
-## Diagram Types
+## Installation
 
-### 1. Tree Diagrams
-
-For probability trees, decision trees, and hierarchical outcomes.
-
-```asy
-import MaximumMathematics;
-
-string[] coins = {"H", "T"};
-string[] colors = {"B", "R"};
-
-TreeDiagram tree = TreeDiagram(new string[][] {coins, colors});
-
-ImageConfig config = ImageConfig();
-config.caption = "Coin Flip Outcomes";
-
-Image(config).add(tree);
-```
-
-**Features:**
-- Arbitrary number of levels
-- Branch pruning (show/hide branches)
-- Automatic layout
-- Customizable spacing and styling
-
-### 2. Truth Tables
-
-For logical propositions and boolean algebra.
-
-```asy
-import MaximumMathematics;
-
-bool[] p_and_q = {false, false, false, true};
-bool[] p_or_q = {false, true, true, true};
-
-Proposition[] props = {
-    Proposition("$p \\land q$", p_and_q),
-    Proposition("$p \\lor q$", p_or_q)
-};
-
-TruthTableDiagram table = TruthTableDiagram(2, props);
-table.highlight_cell(1, 0);  // Show differences
-
-ImageConfig config = ImageConfig();
-config.caption = "AND vs OR Operations";
-
-Image(config).add(table);
-```
-
-**Features:**
-- Arbitrary number of variables (1-8+, practical limit ~4-5)
-- Cell highlighting and hiding
-- Custom column widths
-- LaTeX support in headers
-
-### 3. Relation Diagrams
-
-For functions, relations, and mappings between sets.
-
-```asy
-import MaximumMathematics;
-
-SetData[] sets = {
-    SetData("Domain", new string[] {"1", "2", "3"}),
-    SetData("Codomain", new string[] {"a", "b", "c"})
-};
-
-RelationDiagram diagram = RelationDiagram(sets);
-diagram.add_relation(0, new pair[] {(0,0), (1,1), (2,2)});
-
-ImageConfig config = ImageConfig();
-config.caption = "Bijective Function";
-
-Image(config).add(diagram);
-```
-
-**Features:**
-- Arbitrary number of sets (2-5+ practical)
-- Multiple relations (function composition)
-- Automatic layout
-- LaTeX support
-
----
-
-## Gallery Support
-
-Create grids of multiple diagrams:
-
-```asy
-import MaximumMathematics;
-
-// Create diagrams
-TreeDiagram tree = TreeDiagram(sets1);
-TruthTableDiagram table = TruthTableDiagram(2, props);
-
-// Create images with captions
-ImageConfig config1 = ImageConfig();
-config1.caption = "Tree Diagram";
-Image img1 = Image(config1);
-img1.add(tree);
-
-ImageConfig config2 = ImageConfig();
-config2.caption = "Truth Table";
-Image img2 = Image(config2);
-img2.add(table);
-
-// Arrange in gallery
-Gallery gallery = Gallery(1, 2, visual_width=4, visual_height=3);  // 1 row, 2 columns
-gallery.add(diagram1, 0, 0, "Figure 1: First diagram");
-gallery.add(diagram2, 0, 1, "Figure 2: Second diagram");
-gallery.render();
-```
-
----
-
-## Architecture
-
-Maximum Mathematics uses a **layered architecture**:
-
-```
-Layer 4: Gallery          ← Grid layout for multiple diagrams
-Layer 3: Image            ← Zone management, captions, auto-rendering
-Layer 2: *Diagram         ← TreeDiagram, TruthTableDiagram, RelationDiagram
-Layer 1: Implementation   ← Core rendering engines (deprecated but used internally)
-Layer 0: Data             ← Your data structures
-```
-
-**Design Philosophy:**
-- **Data** → **Diagram** → **Image** → **Gallery**
-- Configure at the appropriate level
-- Sensible defaults everywhere
-- Automatic rendering throughout
-
----
-
-## Documentation
-
-### Getting Started
-- **README.md** (this file) - Overview and quick start
-- **UNIFIED_API.md** - Complete API reference with examples
-- **MARGIN_SYSTEM.md** - CSS-like margin system guide
-- **MIGRATION_GUIDE.md** - How to migrate from older APIs
-
-### Architecture & Design
-- **ARCHITECTURE.md** - System design and architecture details
-- **REFACTORING_SUMMARY.md** - Evolution and refactoring history
-
-### Specific Diagram Types (Deprecated but still useful)
-- **TREE_OOP_API.md** - Old tree API (deprecated)
-- **TRUTH_TABLE_API.md** - Old truth table API (deprecated)
-- **ARROW_DIAGRAM_API.md** - Old relation API (deprecated)
-
-### Refactoring Details
-- **TREE_DIAGRAM_REFACTORING.md** - Tree refactoring details
-- **TRUTH_TABLE_REFACTORING.md** - Truth table refactoring details
-- **ARROW_DIAGRAM_REFACTORING.md** - Relation diagram refactoring details
-
----
-
-## Examples
-
-All examples are organized in the `Examples/` directory by type:
-
-### Gallery Examples (`Examples/Gallery/`)
-- `test_gallery.asy` - 2x2 gallery with relation diagrams
-- `test_gallery_simple.asy` - Simple 1x2 gallery
-- `test_gallery_minimal.asy` - Minimal single-cell gallery
-- `test_gallery_2x3.asy` - 2x3 gallery with colored squares
-- `test_gallery_colored_squares.asy` - 2x2 gallery demonstration
-
-### Image Examples (`Examples/Image/`)
-- `test_layout.asy` - Image layout and zone management testing
-
-### Relation Diagram Examples (`Examples/RelationDiagram/`)
-- `test_relation_diagram.asy` - Basic relation diagram with 3 sets
-- `test_relation_types_gallery.asy` - Gallery showing different relation types (injective, surjective, bijective)
-
-All examples use the unified API and demonstrate the modular architecture.
-
----
-
-## API Comparison
-
-### Generation 3: Unified (RECOMMENDED)
-
-```asy
-TreeDiagram tree = TreeDiagram(sets);
-ImageConfig config = ImageConfig();
-config.caption = "My Tree";
-Image(config).add(tree);
-```
-
-**Advantages:**
-- 2-5 lines for most diagrams
-- Auto-rendering
-- Built-in captions
-- Gallery support
-- Consistent across all diagram types
-
-### Generation 2: Old OOP (DEPRECATED)
-
-```asy
-Tree tree = Tree(sets, 14, 11);
-tree.prune("T");
-tree.draw();
-```
-
-**Status:** Deprecated but functional. Use Gen 3 for new code.
-
-### Generation 1: Legacy Procedural (DEPRECATED)
-
-```asy
-truth_table_2(1cm, 7, 5, propositions, {}, lightyellow, {});
-```
-
-**Status:** Deprecated but functional. Use Gen 3 for new code.
-
----
-
-## Features in Detail
-
-### Automatic Rendering
-
-No need to call `draw()`, `render()`, or manage output:
-
-```asy
-TreeDiagram tree = TreeDiagram(sets);
-Image().add(tree);  // Automatically renders to SVG!
-```
-
-The system:
-- Automatically adds to `currentpicture`
-- Sets `settings.outformat = "svg"` by default
-- Handles all coordinate transformations
-- Manages zone layout
-
-### Caption Support
-
-**NEW: Two-Part Professional Captions**
-
-Captions with separate title and explanation (publication-ready):
-
-```asy
-ImageConfig config = ImageConfig();
-config.caption_title = "Figure 1:";              // Left-aligned title
-config.caption_text = "Sample space diagram";    // Left-aligned explanation
-config.caption_height = 1.2;
-config.caption_title_width = 2.0;  // Optional: explicit title width
-
-Image(config).add(diagram);
-```
-
-**OLD: Single Centered Caption** (still supported):
-
-```asy
-ImageConfig config = ImageConfig();
-config.caption = "Probability Distribution";
-config.caption_text_factor = 2.0;  // Larger caption
-config.caption_pen = blue;         // Colored caption
-
-Image(config).add(diagram);
-```
-
-Layout:
-```
-┌─────────────────────────────────────────┐
-│         Caption Zone                    │
-│  ┌─────────┬──────────────────────────┐ │
-│  │Figure 1:│ The explanation text     │ │
-│  │         │ will go here             │ │
-│  └─────────┴──────────────────────────┘ │
-└─────────────────────────────────────────┘
-```
-
-Captions automatically:
-- Appear at bottom
-- Support two-part (title + text) or single format
-- Both left-aligned at same height
-- Scale with image size
-- Support LaTeX math notation
-
-### CSS-like Box Model (Margins + Padding)
-
-Control spacing with the complete CSS box model:
-
-```asy
-ImageConfig config = ImageConfig();
-config.canvas_width = 8;                 // Canvas size
-config.canvas_height = 6;
-
-// Margins (outside canvas/caption zones)
-config.margin = 0.5;                     // Uniform margin
-config.margin_horizontal = 1.0;          // Override left + right
-config.margin_left = 2.0;                // Override left specifically
-
-// Padding (inside canvas zone)
-config.canvas_padding = 0.3;             // Uniform canvas padding
-config.canvas_padding_top = 0.5;         // Override top specifically
-
-// Padding (inside caption zone)
-config.caption_padding_vertical = 0.2;   // Caption padding
-
-Image(config).add(diagram);
-```
-
-**Box Model Priority** (CSS-like specificity):
-1. `margin/padding` - All sides (lowest priority)
-2. `margin_horizontal/vertical` or `padding_horizontal/vertical` - Override pairs
-3. `margin_left/right/top/bottom` or `padding_left/right/top/bottom` - Individual (highest priority)
-
-**Layout:**
-- **Margins**: Space outside canvas/caption zones
-- **Canvas zone**: Fixed size containing visualization
-- **Canvas padding**: Space inside canvas (reduces visualization area)
-- **Caption padding**: Space inside caption zone
-
-**See**: `MARGIN_SYSTEM.md` for complete documentation
-
-### Zone Management
-
-Images are divided into zones:
-
-```
-┌──────────────────────┐
-│  Content Margin      │
-│  ┌────────────────┐  │
-│  │                │  │
-│  │  Content Zone  │  │ ← Your diagram renders here
-│  │                │  │
-│  └────────────────┘  │
-│  Content Margin      │
-│  ┌────────────────┐  │
-│  │ Caption Zone   │  │ ← Optional caption
-│  └────────────────┘  │
-└──────────────────────┘
-```
-
-All zone calculations are automatic.
-
-### Gallery Layout
-
-Arrange multiple diagrams in a grid:
-
-```asy
-Gallery gallery = Gallery(2, 3, visual_width=4, visual_height=3);  // 2 rows, 3 columns
-gallery.add(diagram1, 0, 0, "Figure 1:");  // Top-left
-gallery.add(diagram2, 0, 1, "Figure 2:");  // Top-middle
-gallery.add(diagram3, 0, 2, "Figure 3:");  // Top-right
-gallery.add(diagram4, 1, 0, "Figure 4:");  // Bottom-left
-gallery.render();
-// ... etc
-```
-
-Grid positioning:
-- `(row, col)` indexing (0-based)
-- Automatic spacing and layout
-- Individual cell captions
-- Gallery-wide caption support
-- Handles empty cells
-
-### Layered Configuration
-
-Configure at the appropriate level:
-
-```asy
-// Image-level (affects presentation)
-ImageConfig img_config = ImageConfig();
-img_config.width = 14;
-img_config.caption = "My Diagram";
-img_config.background_color = lightblue;
-
-// Diagram-level (affects visualization)
-TreeConfig tree_config = TreeConfig();
-tree_config.dot_factor = 12;
-tree_config.draw_pruned_branches = true;
-
-// Create and combine
-TreeDiagram tree = TreeDiagram(sets, tree_config);
-tree.prune("T");  // Convenience method
-
-Image(img_config).add(tree);
-```
-
----
-
-## Design Principles
-
-1. **Declarative over Imperative** - Say what you want, not how to do it
-2. **Sensible Defaults** - Zero configuration works for 80% of use cases
-3. **Automatic Everything** - Rendering, layout, spacing all automatic
-4. **Layered Configuration** - Configure at the right level
-5. **Backward Compatible** - Never break existing code
-6. **Easy to Extend** - Adding new diagram types is straightforward
-
----
-
-## Color Palette
-
-Maximum Mathematics includes a built-in color scheme:
-
-- **Brand Colors**: Blue (RGB(0,0,255)), Orange (RGB(255,165,0))
-- **Table Colors**: Gray headers, medium gray sub-headers
-- **Tree Colors**: Red for pruned branches
-- **Custom Colors**: Full Asymptote color support
-
----
-
-## Output Formats
-
-Supported formats (via standard Asymptote):
-
-- **SVG** (default) - Scalable vector graphics
-- **EPS** - Encapsulated PostScript
-- **PDF** - Portable Document Format
-- **PNG** - Raster graphics (with resolution control)
-
-Change format with:
-```asy
-settings.outformat = "pdf";
-```
-
----
-
-## Requirements
-
-- **Asymptote** 2.70+ (vector graphics language)
-- **LaTeX** (for mathematical notation)
-
-### Installation
-
-#### Ubuntu/Debian
-```bash
-sudo apt install asymptote
-```
-
-#### macOS
-```bash
-brew install asymptote
-```
-
-#### Windows
-Download from: http://asymptote.sourceforge.io/
-
----
-
-## Usage
-
-### Command Line
+Clone the repository anywhere you like:
 
 ```bash
-asy mydiagram.asy          # Creates mydiagram.svg (default)
-asy -f pdf mydiagram.asy   # Creates mydiagram.pdf
-asy -f eps mydiagram.asy   # Creates mydiagram.eps
+git clone <repository-url> ~/.asy/Maximum-Asymptote
 ```
 
-### In Your Code
+Asymptote doesn't search subfolders of `~/.asy`, so point your config file (`~/.asy/config.asy`) at the clone:
+
+```asy
+dir += "/absolute/path/to/Maximum-Asymptote";
+```
+
+Then import it in any `.asy` file:
 
 ```asy
 import MaximumMathematics;
+```
 
-// Your diagram code here
-TreeDiagram tree = TreeDiagram(sets);
-Image().add(tree);
+Update anytime with `git pull` — there is no separate build or install step.
+
+**Requirements:** Asymptote 2.70+ and a LaTeX installation (used for mathematical notation).
+
+---
+
+## The `Image`
+
+`Image` is the canvas your visualization is drawn into. Create it with a size (in centimeters) and configure it with setters.
+
+```asy
+Image img = Image();          // default 10 x 8
+Image img = Image(14, 10);    // explicit width x height
+```
+
+Size can also be set after construction with `set_width(w)` / `set_height(h)`.
+
+A visualization is laid out to **fill the image's content area** (the image size minus its padding). If the area is too small for the content, the visualization will be cramped — increase the width/height until it looks right. `set_debug_mode(true)` draws the zones and bounds to help you tune sizes.
+
+### Configuration methods
+
+| Concern | Methods |
+|---|---|
+| **Dimensions** | `set_width(w)`, `set_height(h)` (or pass to the constructor) |
+| **Margins** (outside the canvas) | `set_margin(m)`, `set_margin_horizontal(m)`, `set_margin_vertical(m)`, `set_margin_left/right/top/bottom(m)` |
+| **Diagram padding** (inside the canvas, around the visualization) | `set_diagram_padding(p)`, `set_diagram_padding_horizontal/vertical(p)`, `set_diagram_padding_left/right/top/bottom(p)` |
+| **Caption padding** (inside the caption zone) | `set_caption_padding(p)`, `set_caption_padding_horizontal/vertical(p)`, `set_caption_padding_left/right/top/bottom(p)` |
+| **Caption** | `caption_title(text)`, `caption_text(text)`, `set_caption_height(h)`, `set_caption_title_width_factor(f)` |
+| **Background** | `set_background_color(pen)` |
+| **Debug** | `set_debug_mode(bool)` |
+| **Add + render** | `add(visualization)` |
+
+The more specific a setter, the higher its priority (CSS-like): `set_margin` sets all four sides, `set_margin_horizontal` overrides left+right, `set_margin_left` overrides just the left.
+
+### Captions
+
+A caption has two optional parts laid out side by side: a right-aligned **title** in a narrow left column and a left-aligned, word-wrapped **text** filling the rest.
+
+```asy
+Image img = Image(12, 8);
+img.caption_title("Figure 2:");
+img.caption_text("The distribution of outcomes across the sample space.");
+img.set_caption_height(1.2);
+img.add(diagram);
+```
+
+Provide only `caption_title`, only `caption_text`, or both. Provide neither and no caption zone is created. Both parts support LaTeX math.
+
+---
+
+## Visualizations
+
+Each visualization is created with a constructor, refined with fluent methods, and added to an `Image`. LaTeX math is supported in every label — use a **single** backslash in `.asy` strings (e.g. `"$\land$"`, not `"$\\land$"`).
+
+### RelationDiagram
+
+Functions, relations, and mappings between sets.
+
+```asy
+RelationDiagram diagram = RelationDiagram();
+diagram.add_set(new string[] {"1", "2", "3"}, "A");
+diagram.add_set(new string[] {"a", "b", "c"}, "B");
+diagram.add_set(new string[] {"u", "v", "w"}, "C");
+
+// Relations connect neighboring sets by element index: (source_index, target_index)
+diagram.add_relation(0, 1, new pair[] {(0,0), (1,1), (2,2)});   // A -> B
+diagram.add_relation(1, 2, new pair[] {(0,1), (1,2), (2,0)});   // B -> C
+
+Image img = Image();
+img.set_diagram_padding(0.5);
+img.add(diagram);
+```
+
+| Method | Purpose |
+|---|---|
+| `RelationDiagram()` / `RelationDiagram(sets, names)` | Empty, or seeded with `string[][]` sets and `string[]` names |
+| `add_set(elements, name="", width=0)` | Add one set (`width=0` auto-sizes) |
+| `add_sets(sets, names={}, widths={})` | Add several sets at once |
+| `set_width(set_index, width)` | Fix a set's width |
+| `add_relation(from_set, to_set, pairs)` | Arrows between two sets, by element index |
+| `set_debug_mode(bool)` | Draw zones and boundaries |
+
+### TruthTable
+
+Truth tables for boolean expressions. You give the variable names, the column labels, and one evaluator function per column. An evaluator receives a `bool[]` of the current row's variable values and returns the column's boolean result; the table generates all 2ⁿ rows for you.
+
+```asy
+string[] variables = {"p", "q"};
+string[] column_labels = {"$\neg p$", "$p \land q$", "$\neg(p \land q)$"};
+
+bool not_p(bool[] v)      { return !v[0]; }
+bool p_and_q(bool[] v)    { return v[0] && v[1]; }
+bool nand(bool[] v)       { return !(v[0] && v[1]); }
+
+bool_array_function[] evaluators = {not_p, p_and_q, nand};
+
+TruthTable table = TruthTable(variables, column_labels, evaluators);
+
+Image img = Image(12, 6);
+img.set_diagram_padding(0.5);
+img.add(table);
+```
+
+| Method | Purpose |
+|---|---|
+| `TruthTable(variable_labels, column_labels, evaluators, title="Truth Table")` | Build the table |
+| `set_title(title)` | Set the title |
+| `set_debug_mode(bool)` | Draw bounds |
+
+`bool_array_function` is the alias `bool(bool[])`.
+
+### AccumulationTable
+
+An iterative accumulation: starting from a seed, each row applies your function to the previous total. Columns are Step, Current Total, Change, and Next Total.
+
+```asy
+real compound(real x) { return x * 1.05; }   // 5% per period
+
+AccumulationTable table = AccumulationTable(1000, 8, compound, "Compound Interest (5\%)");
+
+Image img = Image(18, 9);
+img.set_diagram_padding(0.5);
+img.add(table);
+```
+
+| Method | Purpose |
+|---|---|
+| `AccumulationTable(seed=0, steps=10, func=identity, title="Accumulation Table")` | Build the table |
+| `set_title(title)` | Set the top header |
+| `set_step_header / set_accum_header / set_change_header / set_next_total_header(label)` | Rename a column |
+| `set_debug_mode(bool)` | Draw bounds |
+
+`func` has type `real_function_1` (`real(real)`) and maps the current total to the next total.
+
+### DiscreteGraph
+
+A discrete step/bar plot sampling a function at the left, middle, or right of each interval — useful for Riemann-sum and accumulation illustrations.
+
+```asy
+real value(real x) { return 1000 * exp(log(1.05) * x); }
+
+DiscreteGraph g = DiscreteGraph(1, 0, "left", 8, value);
+g.set_window(-0.5, 8.5, 0, 0);   // ymin == ymax => auto-compute the y-window
+
+Image img = Image(12, 6);
+img.set_diagram_padding(0.5);
+img.caption_title("Figure 3:");
+img.caption_text("Discrete accumulation, sampled per period.");
+img.add(g);
+```
+
+| Method | Purpose |
+|---|---|
+| `DiscreteGraph(dx=1, first_x=0, anchor="left", steps=10, func=identity, xmin=0, xmax=0, ymin=0, ymax=0)` | Build and sample |
+| `set_dx / set_first_x / set_steps(...)` | Change sampling geometry |
+| `set_anchor("left"\|"mid"\|"right")` | Where each interval is sampled |
+| `set_function(func)` | Replace the function and re-sample |
+| `set_window(xmin, xmax, ymin, ymax)` | Set the view (equal min==max leaves that axis auto) |
+| `set_debug_mode(bool)` | Draw bounds |
+
+---
+
+## Galleries
+
+`Gallery` arranges several visualizations in a grid. Each cell has the same visual size and an optional per-cell caption. Configure it with setters and add cells by `(row, col)` — like `Image`, the gallery **renders automatically** as you add to it, so you never call a render function yourself. Set gallery-wide options such as the caption last; they re-render the gallery to pick up the change.
+
+The **visual width** and **visual height** describe the size of a single visual within the grid, not the size of the whole gallery. Every cell in the grid reserves the same box: `visual_width` is how wide each individual visual is, and `visual_height` is how tall each individual visual is. The overall gallery grows from these — its total size is the visuals laid out across `rows × cols`, plus the padding, margins, cell captions, and the gallery caption zone. You can set them in the constructor (`visual_width` / `visual_height`) or afterwards with `set_visual_width` / `set_visual_height`. Set them **before** adding visuals, since each visual is rendered to its stored size at the moment you call `add()`.
+
+```asy
+Gallery gallery = Gallery(1, 3, visual_width=4, visual_height=3);
+gallery.set_margin(0.5);
+gallery.set_padding(0.3);
+gallery.set_caption_height(0.8);
+
+RelationDiagram a = RelationDiagram();
+a.add_set(new string[] {"1", "2"}, "A");
+a.add_set(new string[] {"x", "y"}, "B");
+a.add_relation(0, 1, new pair[] {(0,0), (1,1)});
+gallery.add(a, 0, 0, "Figure 1: Injective");
+
+// ... build diagrams b and c the same way ...
+gallery.add(b, 0, 1, "Figure 2: Surjective");
+gallery.add(c, 0, 2, "Figure 3: Bijective");
+
+// Gallery-wide caption, set after the cells — this re-renders automatically.
+gallery.caption_title("Figure 1:");
+gallery.caption_text("Three kinds of relations between two sets.");
+```
+
+| Method | Purpose |
+|---|---|
+| `Gallery(rows, cols, visual_width=5, visual_height=4)` | Create the grid |
+| `add(RelationDiagram, row, col, caption="")` | Place a relation diagram in a cell |
+| `add(picture, row, col, caption="")` | Place any pre-rendered picture in a cell |
+| `set_margin / set_padding(v)` | Grid spacing |
+| `set_visual_width / set_visual_height(v)` | Size of each visual in a cell (set before `add`) |
+| `set_caption_height / set_cell_caption_height(h)` | Caption zone heights |
+| `caption_title / caption_text(text)` | Gallery-wide caption |
+| `set_background_color(pen)`, `set_debug_mode(bool)` | Styling / debug |
+
+`Gallery` accepts a `RelationDiagram` directly. To place any other visualization in a cell, render it to a picture first and add that picture:
+
+```asy
+TruthTable table = TruthTable(variables, column_labels, evaluators);
+gallery.add(table.render(4, 3, 1cm), 0, 1, "Truth table");
 ```
 
 ---
 
-## Project Structure
+## Standalone rendering
+
+If you want a visualization on its own, without an enclosing `Image`, call its `render(width, height, unit)` and add the picture yourself. This is the one place you render explicitly.
+
+```asy
+RelationDiagram diagram = RelationDiagram();
+diagram.add_set(new string[] {"1", "2"}, "A");
+diagram.add_set(new string[] {"a", "b"}, "B");
+diagram.add_relation(0, 1, new pair[] {(0,0), (1,1)});
+
+picture p = diagram.render(8, 6, 1cm);   // width, height (cm), unit
+add(currentpicture, p);
+```
+
+Every visualization implements the same `render(width, height, unit)` contract and lays itself out to fill the given `width` x `height`.
+
+---
+
+## Output and viewing
+
+The library does not override your output format. Choose one the standard Asymptote way:
+
+```asy
+settings.outformat = "svg";   // or "pdf", "eps", "png"
+```
+
+```bash
+asy mydiagram.asy            # uses your configured format
+asy -f svg mydiagram.asy     # force SVG
+```
+
+**Tip:** if you rasterize the SVG output to PNG to preview it, use a WebKit-based tool (e.g. `qlmanage` on macOS) or a browser. ImageMagick does not resolve the glyph references in Asymptote's SVG and will drop characters, making a correct figure look broken.
+
+---
+
+## Styling and typography
+
+Global pens, colors, and typography are defined in `MaximumMathematics.asy` and shared by every visualization:
+
+- **Brand colors:** `brand_color_1` (blue), `brand_color_2` (orange)
+- **Table colors:** `table_header`, `table_sub_header`
+- **Graph colors:** `axis_color`, `grid_color`, `function_color_1`, `function_color_2`
+- **Typography:** `header_1`, `header_2`, `header_3`, `text_large`, `text_normal`, `text_small` — each a `TypographyPen` whose pen is its `.p` field
+
+Full Asymptote color and pen support is available for anything you pass to a setter (for example `img.set_background_color(rgb(0.98, 0.98, 1.0))`).
+
+---
+
+## Project structure
 
 ```
-Asymptote/
-├── MaximumMathematics.asy          # Main library (includes all modules)
+Maximum-Asymptote/
+├── MaximumMathematics.asy        # Entry point: colors, typography, includes everything
 │
-├── Utilities/                      # Utility modules
-│   ├── TextWrapping.asy            # Text wrapping utilities
-│   ├── Image.asy                   # Image struct (zone management, captions)
-│   └── Gallery.asy                 # Gallery struct (grid layouts)
+├── Utilities/
+│   ├── TextWrapping.asy          # Caption/text wrapping
+│   ├── TextMeasurement.asy       # True (LaTeX) text size measurement
+│   ├── TextSetWidth.asy          # Set-width helpers
+│   ├── FunctionTypes.asy         # Function type aliases (real_function_1, ...)
+│   ├── DefaultFunctions.asy      # identity, square
+│   ├── Image.asy                 # Image: canvas, zones, captions, auto-render
+│   └── Gallery.asy               # Gallery: grid layout
 │
-├── Visualizations/                 # Visualization modules
-│   └── RelationDiagram.asy         # Relation diagram implementation
+├── Visualizations/
+│   ├── RelationDiagram.asy
+│   ├── TruthTable.asy
+│   ├── AccumulationTable.asy
+│   └── DiscreteGraph.asy
 │
-└── Examples/                       # Example files organized by type
-    ├── Gallery/                    # Gallery examples
-    │   ├── test_gallery.asy
-    │   ├── test_gallery_simple.asy
-    │   ├── test_gallery_minimal.asy
-    │   ├── test_gallery_2x3.asy
-    │   └── test_gallery_colored_squares.asy
-    ├── Image/                      # Image examples
-    │   └── test_layout.asy
-    └── RelationDiagram/           # Relation diagram examples
-        ├── test_relation_diagram.asy
-        └── test_relation_types_gallery.asy
+└── Examples/                     # Runnable examples, grouped by visualization
 ```
 
----
-
-## Common Use Cases
-
-### Academic Papers
-
-```asy
-// Clean, professional diagrams with captions
-TruthTableDiagram table = TruthTableDiagram(3, propositions);
-ImageConfig config = ImageConfig();
-config.caption = "Figure 1: De Morgan's Laws";
-Image(config).add(table);
-```
-
-### Textbooks
-
-```asy
-// Multiple related diagrams
-Gallery gallery = Gallery(2, 2, visual_width=4, visual_height=3);
-gallery.add(example1, 0, 0, "Example 1:");
-gallery.add(example2, 0, 1, "Example 2:");
-gallery.add(exercise1, 1, 0, "Exercise 1:");
-gallery.add(solution1, 1, 1, "Solution 1:");
-gallery.render();
-```
-
-### Presentations
-
-```asy
-// Large, clear diagrams
-ImageConfig config = ImageConfig();
-config.width = 16;
-config.height = 12;
-config.background_color = rgb(0.95, 0.95, 1.0);
-
-TreeDiagram tree = TreeDiagram(sets);
-Image(config).add(tree);
-```
-
-### Problem Sets
-
-```asy
-// Hide answers for student exercises
-TruthTableDiagram table = TruthTableDiagram(2, props);
-table.hide_cells(new pair[] {(0,0), (1,0)});
-
-ImageConfig config = ImageConfig();
-config.caption = "Exercise 3.1";
-Image(config).add(table);
-```
-
----
-
-## Advanced Features
-
-### Custom Styling
-
-```asy
-// Diagram-level styling
-TreeConfig tree_config = TreeConfig();
-tree_config.dot_factor = 12;         // Larger dots
-tree_config.draw_pruned_branches = true;
-
-// Image-level styling
-ImageConfig img_config = ImageConfig();
-img_config.background_color = rgb(0.98, 0.98, 1.0);
-img_config.content_margin = 0.3;
-
-TreeDiagram tree = TreeDiagram(sets, tree_config);
-Image(img_config).add(tree);
-```
-
-### Branch Pruning
-
-```asy
-TreeDiagram tree = TreeDiagram(sets);
-tree.prune("T");                    // Prune entire branch
-tree.prune("H", "element");         // Prune specific path
-tree.show_pruned_branches(true);    // Show in red
-
-Image().add(tree);
-```
-
-### Cell Highlighting
-
-```asy
-TruthTableDiagram table = TruthTableDiagram(3, props);
-table.highlight_cells(new pair[] {(0,0), (1,1), (2,0)});
-table.set_variable_names(new string[] {"p", "q", "r"});
-
-Image().add(table);
-```
-
-### Multi-Set Relations
-
-```asy
-// Function composition: A → B → C → D
-SetData[] sets = {
-    SetData("A", elements_A),
-    SetData("B", elements_B),
-    SetData("C", elements_C),
-    SetData("D", elements_D)
-};
-
-RelationDiagram diagram = RelationDiagram(sets);
-diagram.add_relation(0, arrows_AB);  // A → B
-diagram.add_relation(1, arrows_BC);  // B → C
-diagram.add_relation(2, arrows_CD);  // C → D
-
-Image().add(diagram);
-```
-
----
-
-## API Evolution
-
-Maximum Mathematics has evolved through three generations:
-
-| Generation | Status | Description |
-|------------|--------|-------------|
-| **Gen 3** | ✅ **Current** | Unified architecture with auto-rendering |
-| Gen 2 | ⚠️ Deprecated | Old OOP API (still works) |
-| Gen 1 | ⚠️ Deprecated | Legacy procedural (still works) |
-
-**All generations work simultaneously** - migrate at your own pace.
-
----
-
-## Performance
-
-- **Rendering Speed**: Fast for typical use cases (< 1 second)
-- **Output Size**: SVG files typically 10-50 KB
-- **Scalability**: 
-  - Trees: Tested with 5+ levels, dozens of branches
-  - Truth Tables: Tested with 4 variables (16 rows)
-  - Relations: Tested with 5 sets, 50+ arrows
-  - Galleries: Tested with 3x3 grids (9 diagrams)
-
----
-
-## Contributing
-
-When extending the library:
-
-1. Follow the established patterns (see `ARCHITECTURE.md`)
-2. Provide sensible defaults for all configuration
-3. Create both minimal and advanced examples
-4. Document the new features
-5. Maintain backward compatibility
-
-### Adding New Diagram Types
-
-See `ARCHITECTURE.md` section "Extension Points" for details on adding new diagram types following the unified architecture pattern.
-
----
-
-## Version History
-
-### v3.0 (November 2025) - Unified Architecture
-- Added `Image` coordinator with zone management
-- Added `Gallery` for multiple diagrams
-- Created `*Diagram` wrappers with `*Config` structs
-- Implemented automatic rendering
-- Built-in caption support
-- Marked Gen 2 APIs as deprecated
-
-### v3.1 (November 2025) - Modular Refactoring
-- Extracted utilities to `Utilities/` folder:
-  - `TextWrapping.asy` - Text wrapping functions
-  - `Image.asy` - Image struct implementation
-  - `Gallery.asy` - Gallery struct implementation
-- Extracted visualizations to `Visualizations/` folder:
-  - `RelationDiagram.asy` - Relation diagram implementation
-- Organized examples by type in `Examples/` subfolders
-- Improved code organization and maintainability
-
-### v2.0 (2024) - OOP Refactoring
-- Refactored trees to support arbitrary levels
-- Refactored truth tables to support arbitrary variables
-- Refactored arrow diagrams to support arbitrary sets
-- Created OOP interfaces (Tree, TruthTable, ArrowDiagram)
-- Eliminated 60-75% code duplication
-
-### v1.0 (2020-2024) - Initial Release
-- Procedural functions for trees, truth tables, arrow diagrams
-- Support for 1-3 levels/variables/sets
-- Basic graphing and plotting functions
-
----
-
-## License
-
-[Add your license here]
+`import MaximumMathematics;` pulls in everything.
 
 ---
 
 ## Credits
 
-Maximum Mathematics
-Created by Jacob Hiance
-
----
-
-## Support
-
-For questions, issues, or contributions, see the documentation in this repository.
-
----
-
-## Quick Reference Card
-
-```asy
-// ═══════════════════════════════════════════════
-// MAXIMUM MATHEMATICS - QUICK REFERENCE
-// ═══════════════════════════════════════════════
-
-import MaximumMathematics;
-
-// ──────── TREE DIAGRAM ────────
-TreeDiagram tree = TreeDiagram(new string[][] {A, B});
-tree.prune("element");
-Image().add(tree);
-
-// ──────── TRUTH TABLE ────────
-bool[] values = {false, false, false, true};
-Proposition[] props = {Proposition("$p \\land q$", values)};
-TruthTableDiagram table = TruthTableDiagram(2, props);
-table.highlight_cell(0, 0);
-Image().add(table);
-
-// ──────── RELATION DIAGRAM ────────
-SetData[] sets = {SetData("A", A), SetData("B", B)};
-RelationDiagram diagram = RelationDiagram(sets);
-diagram.add_relation(0, arrows);
-Image().add(diagram);
-
-// ──────── WITH CAPTION ────────
-ImageConfig config = ImageConfig();
-config.caption = "My Caption";
-config.width = 12;
-Image(config).add(diagram);
-
-// ──────── GALLERY ────────
-Gallery gallery = Gallery(2, 2, visual_width=4, visual_height=3);
-gallery.add(diagram1, 0, 0, "Figure 1:");
-gallery.add(diagram2, 0, 1, "Figure 2:");
-gallery.render();
-
-// ═══════════════════════════════════════════════
-```
-
----
-
-**Start creating beautiful mathematical diagrams in just 2-5 lines of code!**
-
+Maximum Mathematics — created by Jacob Hiance.

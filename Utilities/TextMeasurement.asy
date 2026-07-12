@@ -1,73 +1,57 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Text measurement utility functions
-// Provides functions to measure actual rendered text width for visual testing
-// Used to help determine spacing values (char_width_estimate) for TypographyPen structs
+// Measures the true rendered size of text (including LaTeX math) by typesetting it and reading
+// back the bounding box. Asymptote renders labels through LaTeX, so a string such as
+// "$p \land q$" is measured at its real glyph extent rather than its raw character count.
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Measure the actual width of text when rendered with a given pen
-// Returns the width in the current units
-// Use this function to visually test and determine appropriate char_width_estimate values
-real measure_text_width(string text, pen p) {
+// A label is "truesize" content: its bounding box is reported in PostScript points (bp), not in
+// the picture's unit, regardless of unitsize. Convert points to centimeters to match the rest of
+// the library, which works in cm (1 bp = 1/72 inch, 1 inch = 2.54 cm).
+real bp_to_cm = 2.54 / 72;
+
+// Measure the true rendered size of text with a given pen.
+// Returns (width, height) in centimeters.
+pair measure_text_size(string text, pen p) {
     if (length(text) == 0) {
-        return 0;
+        return (0, 0);
     }
-    
-    // Create a temporary picture to measure the text
+
+    // Typeset the text into a throwaway picture and read its bounding box. Center alignment keeps
+    // the box symmetric around the origin; only its extent matters here.
     picture temp_pic = new picture;
-    unitsize(temp_pic, 1cm);  // Use 1cm as base unit
-    
-    // Render the text with the given pen at origin, left-aligned
-    label(temp_pic, text, (0, 0), p=p, align=W);
-    
-    // Get the size of the picture (this is more reliable than min/max)
-    pair pic_size = size(temp_pic);
-    
-    // Return the width (x component)
-    real text_width = pic_size.x;
-    
-    // Cap at reasonable maximum to prevent measurement errors
-    // Typical text width should be much less than 100 units
-    if (text_width > 100) {
-        return length(text) * 0.4;  // Fallback if measurement is clearly wrong
-    }
-    
-    // If width is 0 or very small, use simple fallback (avoid circular dependency)
-    if (text_width < 0.1) {
-        return length(text) * 0.4;  // Simple fallback estimate
-    }
-    
-    return text_width;
+    unitsize(temp_pic, 1cm);
+    label(temp_pic, text, (0, 0), p=p, align=Center);
+
+    pair lo = min(temp_pic);
+    pair hi = max(temp_pic);
+
+    return ((hi.x - lo.x) * bp_to_cm, (hi.y - lo.y) * bp_to_cm);
 }
 
-// Find a single character width that works for all characters (monospace-like)
-// Measures a sample of characters and returns the maximum width
-// Use this function to visually test and determine appropriate char_width_estimate values
+// Measure the true rendered width of text with a given pen.
+// Returns the width in centimeters.
+real measure_text_width(string text, pen p) {
+    return measure_text_size(text, p).x;
+}
+
+// Measure the true rendered height of text with a given pen.
+// Returns the height in centimeters.
+real measure_text_height(string text, pen p) {
+    return measure_text_size(text, p).y;
+}
+
+// Find a single character width that accommodates every character in a sample (monospace-like).
+// Measures a sample of characters with the given pen and returns the widest.
+// Useful for deriving a square cell size for grid layouts.
 real find_universal_char_width(pen p) {
-    // Sample characters: all letters, numbers, and common symbols
     string sample_chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.,;:!?()[]{}";
-    
+
     real max_width = 0;
-    int count = 0;
-    
-    // Measure each character
     for (int i = 0; i < length(sample_chars); ++i) {
-        string ch = substr(sample_chars, i, i+1);
-        real char_width = measure_text_width(ch, p);
-        // Only count valid measurements (reasonable range: 0.01 to 5.0)
-        if (char_width > 0.01 && char_width < 5.0) {
-            max_width = max(max_width, char_width);
-            count = count + 1;
-        }
+        string ch = substr(sample_chars, i, 1);
+        max_width = max(max_width, measure_text_width(ch, p));
     }
-    
-    if (count == 0 || max_width < 0.1) {
-        // Fallback to simple estimation (avoid circular dependency)
-        // Use a conservative estimate based on typical font sizes
-        return 0.4;  // Default fallback
-    }
-    
-    // Use the maximum width to ensure all characters fit
-    // This gives us a "monospace" width that accommodates the widest character
+
     return max_width;
 }
-

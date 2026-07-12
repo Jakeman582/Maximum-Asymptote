@@ -11,9 +11,3 @@ diagram.add_relation(0, 1, new pair[] {(0,0), (1,1)});
 
 // Add to gallery
 gallery.add(diagram, 0, 0, "Figure 1: Test caption");
-
-// Ensure gallery is rendered
-gallery.render();
-
-
-

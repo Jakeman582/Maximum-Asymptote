@@ -1,5 +1,4 @@
 import graph;
-import three;
 
 unitsize(1cm);
 
@@ -79,22 +78,22 @@ struct TypographyPen {
     }
 }
 
-// Header sizes (larger than text for visual distinction) - using Helvetica Bold
-TypographyPen header_1 = TypographyPen(fontsize(1.2cm) + Helvetica("b"), 0.669222);  // Determined from visual testing
-TypographyPen header_2 = TypographyPen(fontsize(1.0cm) + Helvetica("b"), 0.629856);  // Determined from visual testing
-TypographyPen header_3 = TypographyPen(fontsize(0.8cm) + Helvetica("b"), 0.52488);  // Determined from visual testing
+// Header sizes (larger than text for visual distinction) - using a simple default pen
+TypographyPen header_1 = TypographyPen(fontsize(1.2cm) + fontsize(0), 0.669222);  // Determined from visual testing
+TypographyPen header_2 = TypographyPen(fontsize(1.0cm) + fontsize(0), 0.629856);  // Determined from visual testing
+TypographyPen header_3 = TypographyPen(fontsize(0.8cm) + fontsize(0), 0.52488);  // Determined from visual testing
 
-// Text sizes - using Courier
-TypographyPen text_large = TypographyPen(fontsize(0.65cm) + Courier(), 0.4374);  // Determined from visual testing
-TypographyPen text_normal = TypographyPen(fontsize(0.55cm) + Courier(), 0.354294);  // Determined from visual testing
-TypographyPen text_small = TypographyPen(fontsize(0.45cm) + Courier(), 0.314928);  // Determined from visual testing
+// Text sizes - using a simple default pen
+TypographyPen text_large = TypographyPen(fontsize(0.65cm) + fontsize(0), 0.4374);  // Determined from visual testing
+TypographyPen text_normal = TypographyPen(fontsize(0.55cm) + fontsize(0), 0.354294);  // Determined from visual testing
+TypographyPen text_small = TypographyPen(fontsize(0.45cm) + fontsize(0), 0.314928);  // Determined from visual testing
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Include utilities
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+include "Utilities/TextMeasurement.asy";  // defines measure_text_size, used by wrap_text below
 include "Utilities/TextWrapping.asy";
-include "Utilities/TextMeasurement.asy";
 include "Utilities/TextSetWidth.asy";
 include "Utilities/DefaultFunctions.asy";
 include "Utilities/FunctionTypes.asy";
@@ -106,6 +105,7 @@ include "Utilities/FunctionTypes.asy";
 include "Visualizations/RelationDiagram.asy";
 include "Visualizations/DiscreteGraph.asy";
 include "Visualizations/AccumulationTable.asy";
+include "Visualizations/TruthTable.asy";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Include utilities

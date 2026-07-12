@@ -40,7 +40,3 @@ gallery.add(purple_square, 1, 2, "(f)");
 // Add gallery caption
 gallery.caption_title("Figure 1:");
 gallery.caption_text("A 2x3 gallery of colored squares demonstrating the layout system with automatic text wrapping for long captions that exceed the available width.");
-
-// Gallery automatically renders!
-gallery.render();
-

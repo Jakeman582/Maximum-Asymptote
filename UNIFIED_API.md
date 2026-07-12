@@ -113,8 +113,8 @@ bool[] p_and_q = {false, false, false, true};
 bool[] p_or_q = {false, true, true, true};
 
 Proposition[] props = {
-    Proposition("$p \\land q$", p_and_q),
-    Proposition("$p \\lor q$", p_or_q)
+    Proposition("$p \land q$", p_and_q),
+    Proposition("$p \lor q$", p_or_q)
 };
 
 TruthTableDiagram table = TruthTableDiagram(2, props);
@@ -364,7 +364,7 @@ Image(img_config).add(tree);
 No need to call output/render methods:
 - `Image().add(diagram)` - Automatically renders to `currentpicture`
 - `gallery.add(img, pos)` - Automatically re-renders gallery
-- `settings.outformat = "svg"` - Automatically set
+- Output format follows your Asymptote configuration (the library does not override `settings.outformat`)
 
 ### 4. Layered Configuration
 
@@ -493,7 +493,7 @@ gallery.render();
 import MaximumMathematics;
 
 string[] A = {"H", "T"};
-string[] B = {"$\\spadesuit$", "$\\heartsuit$", "$\\diamondsuit$", "$\\clubsuit$"};
+string[] B = {"$\spadesuit$", "$\heartsuit$", "$\diamondsuit$", "$\clubsuit$"};
 string[] C = {"B", "R"};
 
 // Create and configure diagram
@@ -502,7 +502,7 @@ tree_config.draw_pruned_branches = true;
 
 TreeDiagram tree = TreeDiagram(new string[][] {A, B, C}, tree_config);
 tree.prune("T");
-tree.prune("H", "$\\diamondsuit$");
+tree.prune("H", "$\diamondsuit$");
 
 // Create image
 ImageConfig img_config = ImageConfig();
@@ -523,8 +523,8 @@ bool[] prop1 = {false, false, false, true, false, true, false, true};
 bool[] prop2 = {false, false, false, true, true, true, true, true};
 
 Proposition[] props = {
-    Proposition("$(p \\lor q) \\land r$", prop1, 2),
-    Proposition("$p \\lor (q \\land r)$", prop2, 2)
+    Proposition("$(p \lor q) \land r$", prop1, 2),
+    Proposition("$p \lor (q \land r)$", prop2, 2)
 };
 
 // Create diagram
@@ -547,8 +547,8 @@ Image(config).add(table);
 import MaximumMathematics;
 
 SetData[] sets = {
-    SetData("$\\mathbb{Z}_6$", new string[] {"0", "1", "2", "3", "4", "5"}),
-    SetData("$\\mathbb{Z}_3$", new string[] {"0", "1", "2"})
+    SetData("$\mathbb{Z}_6$", new string[] {"0", "1", "2", "3", "4", "5"}),
+    SetData("$\mathbb{Z}_3$", new string[] {"0", "1", "2"})
 };
 
 RelationDiagram diagram = RelationDiagram(sets);
@@ -557,7 +557,7 @@ diagram.add_relation(0, new pair[] {
 });
 
 ImageConfig config = ImageConfig();
-config.caption = "$f: \\mathbb{Z}_6 \\to \\mathbb{Z}_3$, $f(x) = x \\bmod 3$";
+config.caption = "$f: \mathbb{Z}_6 \to \mathbb{Z}_3$, $f(x) = x \bmod 3$";
 config.width = 10;
 config.height = 10;
 
@@ -746,7 +746,7 @@ gallery.render();
 ## Frequently Asked Questions
 
 **Q: Do I need to call anything to render the output?**  
-A: No! `Image().add(diagram)` automatically renders. Just set `settings.outformat` if you want a format other than SVG.
+A: No! `Image().add(diagram)` automatically renders. The output format follows your Asymptote configuration; set `settings.outformat` if you want a specific format.
 
 **Q: Can I add multiple diagrams to one Image?**  
 A: No, one diagram per Image. Use `Gallery` for multiple diagrams in a grid layout.

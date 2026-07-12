@@ -1,7 +1,7 @@
 import MaximumMathematics;
 
 // Create a gallery with 1 row and 4 columns
-Gallery gallery = Gallery(1, 4, visual_width=4, visual_height=3);
+Gallery gallery = Gallery(1, 4, visual_width=8, visual_height=6);
 
 // Configure gallery-wide settings
 gallery.set_margin(0.5);
@@ -67,9 +67,3 @@ diagram4.add_set(new string[] {"a", "b", "c"}, "Codomain");
 diagram4.add_relation(0, 1, new pair[] {(0,0), (1,1), (2,2)});  // Perfect 1-1 correspondence
 
 gallery.add(diagram4, 0, 3, "Bijective: One-to-one and onto");
-
-// Ensure gallery is rendered
-gallery.render();
-
-
-

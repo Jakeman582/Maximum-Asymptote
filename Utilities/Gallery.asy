@@ -79,17 +79,27 @@ struct Gallery {
         this.pic = new picture;
         unitsize(this.pic, 1cm);
         this.rendered = false;
-        
-        settings.outformat = "svg";
     }
     
     // Setters
     void set_margin(real m) {
         this.margin = m;
     }
-    
+
     void set_padding(real p) {
         this.padding = p;
+    }
+
+    // Width of each visual in the grid (same for every cell). Set before adding
+    // visuals: cells store their picture at the size given here when add() is called.
+    void set_visual_width(real w) {
+        this.visual_width = w;
+    }
+
+    // Height of each visual in the grid (same for every cell). Set before adding
+    // visuals: cells store their picture at the size given here when add() is called.
+    void set_visual_height(real h) {
+        this.visual_height = h;
     }
     
     void set_caption_height(real h) {
@@ -115,15 +125,6 @@ struct Gallery {
     
     bool get_debug_mode() {
         return this.debug_mode;
-    }
-    
-    // Caption methods
-    void caption_title(string title) {
-        this.caption_title_text = title;
-    }
-    
-    void caption_text(string text) {
-        this.caption_text_text = text;
     }
     
     // Helper: Check if gallery has caption
@@ -259,58 +260,6 @@ struct Gallery {
                   (content_center_x, content_y), 
                   align=Center, p=text_small.p);
         }
-    }
-    
-    // Add visual to a cell (from RelationDiagram)
-    void add(RelationDiagram diagram, int row, int col, string caption_label = "") {
-        if (row < 0 || row >= this.rows) {
-            abort("Gallery.add: Invalid row index " + (string)row);
-        }
-        if (col < 0 || col >= this.cols) {
-            abort("Gallery.add: Invalid column index " + (string)col);
-        }
-        
-        // Render diagram to picture
-        picture diagram_pic = diagram.render(
-            this.visual_width,
-            this.visual_height,
-            diagram_unit
-        );
-        
-        // Store in cell
-        this.cells[row][col].visual = diagram_pic;
-        this.cells[row][col].caption_label = caption_label;
-        this.cells[row][col].has_visual = true;
-        
-        // Re-render gallery (will update currentpicture)
-        render();
-    }
-    
-    // Add visual to a cell (from picture directly)
-    void add(picture pic, int row, int col, string caption_label = "") {
-        if (row < 0 || row >= this.rows) {
-            abort("Gallery.add: Invalid row index " + (string)row);
-        }
-        if (col < 0 || col >= this.cols) {
-            abort("Gallery.add: Invalid column index " + (string)col);
-        }
-        
-        // Make a copy of the picture when storing it to avoid reference issues
-        picture pic_copy = new picture;
-        unitsize(pic_copy, 1cm);
-        add(pic_copy, pic);
-        
-        // Store picture copy in cell
-        this.cells[row][col].visual = pic_copy;
-        this.cells[row][col].caption_label = caption_label;
-        this.cells[row][col].has_visual = true;
-        
-        // Re-render gallery (will update currentpicture)
-        // Note: render() must be called explicitly after all add() calls
-        // The render() method doesn't complete when called from within add()
-        // This is a known Asymptote limitation with method calls
-        // For now, we'll rely on explicit render() calls after all add() operations
-        // render();
     }
     
     // Render the entire gallery
@@ -491,6 +440,71 @@ struct Gallery {
         // Note: Even if this.pic appears empty, add it anyway - Asymptote will handle it
         add(currentpicture, this.pic);
         this.rendered = true;
+    }
+
+    // Caption methods. Defined after render() so they can re-render: captions are
+    // typically set after the add() calls, i.e. after the gallery has already
+    // auto-rendered once, so we must render again to pick up the new text.
+    void caption_title(string title) {
+        this.caption_title_text = title;
+        if (this.rendered) this.render();
+    }
+
+    void caption_text(string text) {
+        this.caption_text_text = text;
+        if (this.rendered) this.render();
+    }
+
+    // Add visual to a cell (from RelationDiagram)
+    // Defined after render() so this.render() resolves: Asymptote binds struct member
+    // names top-to-bottom, so a method may only call sibling methods declared above it.
+    void add(RelationDiagram diagram, int row, int col, string caption_label = "") {
+        if (row < 0 || row >= this.rows) {
+            abort("Gallery.add: Invalid row index " + (string)row);
+        }
+        if (col < 0 || col >= this.cols) {
+            abort("Gallery.add: Invalid column index " + (string)col);
+        }
+
+        // Render diagram to picture
+        picture diagram_pic = diagram.render(
+            this.visual_width,
+            this.visual_height,
+            diagram_unit
+        );
+
+        // Store in cell
+        this.cells[row][col].visual = diagram_pic;
+        this.cells[row][col].caption_label = caption_label;
+        this.cells[row][col].has_visual = true;
+
+        // Auto-render so the caller never needs an explicit render() call, matching the
+        // Image.add() contract.
+        this.render();
+    }
+
+    // Add visual to a cell (from picture directly)
+    void add(picture pic, int row, int col, string caption_label = "") {
+        if (row < 0 || row >= this.rows) {
+            abort("Gallery.add: Invalid row index " + (string)row);
+        }
+        if (col < 0 || col >= this.cols) {
+            abort("Gallery.add: Invalid column index " + (string)col);
+        }
+
+        // Make a copy of the picture when storing it to avoid reference issues
+        picture pic_copy = new picture;
+        unitsize(pic_copy, 1cm);
+        add(pic_copy, pic);
+
+        // Store picture copy in cell
+        this.cells[row][col].visual = pic_copy;
+        this.cells[row][col].caption_label = caption_label;
+        this.cells[row][col].has_visual = true;
+
+        // Auto-render so the caller never needs an explicit render() call, matching the
+        // RelationDiagram overload above and the Image.add() contract.
+        this.render();
     }
 };
 

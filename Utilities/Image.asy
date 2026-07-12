@@ -80,10 +80,17 @@ struct Image {
         this.has_visual = false;
         this.rendered = false;
         this.debug_mode = false;
-        
-        settings.outformat = "svg";
     }
-    
+
+    // Dimension setters
+    void set_width(real w) {
+        this.width = w;
+    }
+
+    void set_height(real h) {
+        this.height = h;
+    }
+
     // Margin setters
     void set_margin(real m) {
         this.margin_left = m;
@@ -473,6 +480,16 @@ struct Image {
 
     // Add AccumulationTable directly
     void add(AccumulationTable table) {
+        picture diagram_pic = table.render(
+            get_diagram_width(),
+            get_diagram_height(),
+            diagram_unit
+        );
+        add_visual(diagram_pic);
+    }
+
+    // Add TruthTable directly
+    void add(TruthTable table) {
         picture diagram_pic = table.render(
             get_diagram_width(),
             get_diagram_height(),

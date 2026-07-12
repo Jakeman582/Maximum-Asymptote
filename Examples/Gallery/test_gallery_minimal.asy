@@ -11,9 +11,3 @@ diagram.add_set(new string[] {"a"}, "B");
 diagram.add_relation(0, 1, new pair[] {(0,0)});
 
 gallery.add(diagram, 0, 0, "Test: Minimal gallery");
-
-// Ensure gallery is rendered
-gallery.render();
-
-
-

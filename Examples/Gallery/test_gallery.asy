@@ -34,9 +34,3 @@ gallery.add(diagram1, 0, 0, "Figure 1: First relation");
 gallery.add(diagram2, 0, 1, "Figure 2: Second relation");
 gallery.add(diagram3, 1, 0, "Figure 3: Third relation");
 gallery.add(diagram4, 1, 1, "Figure 4: Fourth relation");
-
-// Ensure gallery is rendered
-gallery.render();
-
-
-
