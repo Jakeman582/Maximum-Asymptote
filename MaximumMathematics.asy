@@ -1,4 +1,5 @@
 import graph;
+import contour;  // used by ContinuousPlot.asy for implicit (f(x, y) = 0) functions
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Include theme
@@ -15,6 +16,8 @@ include "Utilities/TextWrapping.asy";
 include "Utilities/TextSetWidth.asy";
 include "Utilities/DefaultFunctions.asy";
 include "Utilities/FunctionTypes.asy";
+include "Utilities/Functions/Line.asy";   // defines Line, a predefined implicit_2-producing function type
+include "Utilities/Functions/Conic.asy";  // defines Conic, a predefined implicit_2-producing function type
 include "Utilities/AxisTicks.asy";        // defines compute_ticks, used by DiscretePlot and Plot below
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

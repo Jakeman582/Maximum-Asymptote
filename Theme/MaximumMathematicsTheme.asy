@@ -101,6 +101,12 @@ arrowbar function_arrow = ArcArrows(SimpleHead, size = 3);        // both ends (
 arrowbar function_begin_arrow = BeginArrow(SimpleHead, size = 3); // left end only
 arrowbar function_end_arrow = EndArrow(SimpleHead, size = 3);     // right end only
 real plot_endpoint_dot_radius = 0.08;  // Radius for OPEN_DOT/CLOSED_DOT curve endpoint markers
+real plot_arrow_trim = 0.1;  // Distance a curve is trimmed back from an ARROW-marked end, so the
+                              // arrowhead doesn't visually overlap the viewing window's border
+real plot_tick_length = 0.15;  // Full length of a tick mark: edge ticks extend this far outward into
+                                // the margin; interior axis-crossing ticks extend half this far on
+                                // each side of the axis line.
+real plot_tick_label_gap = 0.1;  // Gap between a tick mark's outer end and its label
 
 // Arrow/ray styling (used by RelationDiagram and other diagram types)
 arrowbar ray_arrow = ArcArrow(size = 4);

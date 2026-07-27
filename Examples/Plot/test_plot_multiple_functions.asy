@@ -1,6 +1,6 @@
 import MaximumMathematics;
 
-// Example: two functions on one continuous Plot, sharing an x-domain and window.
+// Example: functions on one continuous Plot, sharing an x-domain and window.
 
 real f1(real x) {return sin(x);}
 real f2(real x) {return cos(x);}
@@ -11,14 +11,13 @@ real f6(real x) {return sqrt(x);}
 real f7(real x) {return exp(x);}
 
 Plot p = Plot();
-p.set_window(-10, 10, -10, 10);
-p.set_x_min(-10);
-p.set_x_max(10);
+p.set_window(5, 10, 5, 10);
+p.set_grid(1, 1);
 p.add(f1);
 p.add(f2);
 p.add(f3);
 p.add(f4);
-p.add(f5, left_marker=ARROW);
+p.add(f5);
 p.add(f6);
 p.add(f7);
 

@@ -2,26 +2,38 @@
 // File: ContinuousPlot.asy
 //
 // Description:
-// Continuous function plot — the standard smooth graph of one or more real(real) functions over a
-// shared x-domain and viewport, as opposed to DiscretePlot's discrete bar/step sampling. Functions
-// are added via add(), with an optional explicit pen for color-coordinating specific functions;
-// every function left on auto-color is resolved at render() time via the theme's
-// plot_function_colors(), since the rainbow policy depends on how many functions need an auto
-// color, not just each function's position — explicitly colored functions are excluded from that
-// count entirely, so the auto-colored ones still spread across the full gradient among themselves.
+// Continuous function plot — the standard smooth graph of one or more functions over a shared
+// viewport, as opposed to DiscretePlot's discrete bar/step sampling. add() takes a function
+// directly — an explicit real_function_1 (real(real)), sampled along x and connected point-to-point,
+// or an implicit_2 (real(real, real)), the curve f(x, y) = 0 traced via Asymptote's contour module —
+// and tells which kind it is from the function's own type, so both can live in the same Plot, drawn
+// in the order they were added. By default a function's domain (or, for implicit, search box) is the
+// plot's own resolved window, since that already defines where the plot is looking; add()'s optional
+// x_min/x_max (and, for implicit, y_min/y_max) override that per function, for the rare case a
+// function needs a domain narrower or wider than the window (e.g. sqrt starting at x=0). Every
+// function left on auto-color is resolved at render() time via the theme's plot_function_colors(),
+// since the rainbow policy depends on how many functions need an auto color, not just each
+// function's position — explicitly colored functions are excluded from that count entirely, so the
+// auto-colored ones still spread across the full gradient among themselves. The graph itself (axes,
+// grid, curves) is drawn inside a square inset from render()'s given width/height by a margin on
+// each side (1 by default; see set_margin_left/right/top/bottom), which is where tick labels live —
+// so nothing a Plot draws can ever land outside the area it was given to render into.
 // "Plot" is a type alias for this struct (see the bottom of this file) — most callers should just
 // use Plot; ContinuousPlot is the canonical name.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Endpoint marker styles for the true left/right ends of a function's plotted curve (add()'s
-// left_marker/right_marker). AUTO's default is ARROW at the function's true outermost visible
-// point — whatever cut it short there, a domain/display edge or a window boundary. Any cut that
-// isn't the function's true leftmost/rightmost point (an interior window-boundary crossing, or
-// resuming after a NaN gap partway through) always draws with no marker regardless of
-// left_marker/right_marker, since only the outermost ends are eligible for a marker at all.
-// Override left_marker/right_marker when ARROW isn't right for a specific function — e.g. sqrt(x)
-// is actually defined and finite at x=0, so CLOSED_DOT reads better there than an arrow implying
-// the curve keeps going. NONE suppresses the marker at that end entirely, including AUTO's arrow.
+// Endpoint marker styles for the true left/right ends of an explicit function's plotted curve
+// (add()'s left_marker/right_marker). Explicit only — not even a parameter on the implicit add()
+// overload, since an implicit function's contour curve can be a closed loop or clipped by its own
+// search box in more than one place, with no well-defined "leftmost/rightmost visible point." AUTO's
+// default is ARROW at the function's true outermost visible point — whatever cut it short there, a
+// domain/display edge or a window boundary. Any cut that isn't the function's true leftmost/rightmost
+// point (an interior window-boundary crossing, or resuming after a NaN gap partway through) always
+// draws with no marker regardless of left_marker/right_marker, since only the outermost ends are
+// eligible for a marker at all. Override left_marker/right_marker when ARROW isn't right for a
+// specific function — e.g. sqrt(x) is actually defined and finite at x=0, so CLOSED_DOT reads better
+// there than an arrow implying the curve keeps going. NONE suppresses the marker at that end
+// entirely, including AUTO's arrow.
 string ARROW = "arrow";
 string OPEN_DOT = "open_dot";
 string CLOSED_DOT = "closed_dot";
@@ -32,7 +44,7 @@ string AUTO = "auto";
 
 // Line type constants for add()'s type parameter — plain aliases for Asymptote's own built-in
 // dash-pattern pens (plain_pens.asy), so any Asymptote linetype pen works here too, not just these
-// six. SOLID is the default.
+// six. SOLID is the default. Applies to both explicit and implicit functions.
 pen SOLID = solid;
 pen DOTTED = dotted;
 pen DASHED = dashed;
@@ -46,23 +58,68 @@ pen LONG_DASH_DOTTED = longdashdotted;
 // it (verified: colors() clamps it to (0,0,0) on query, but pen equality does not, so this is safe).
 pen AUTO_COLOR = rgb(-1, -1, -1);
 
-struct ContinuousPlot {
-    // Private/internal fields (users should access via getters/setters)
-    real_function_1[] _functions;
-    string[] _left_markers;
-    string[] _right_markers;
-    bool[] _has_explicit_color;
-    pen[] _explicit_colors;
-    pen[] _types;
+// Sentinel for add()'s optional x_min/x_max/y_min/y_max, meaning "not given — Plot substitutes its
+// own resolved window edge at render() time instead." A quiet NaN (log of a negative number, rather
+// than a literal 0.0/0.0, which aborts with "Divide by zero" instead of producing NaN), detected via
+// self-inequality — the standard NaN test, since NaN is the only real value unequal to itself, and no
+// caller would ever legitimately pass NaN as a domain bound.
+real UNSET_DOMAIN = log(-1);
 
-    // x-domain: the range over which functions are evaluated. The curve does not extend past this,
-    // even if the window is wider.
+struct ContinuousPlot {
+    // One added function together with everything needed to render it: which kind it is (explicit or
+    // implicit — exactly one of explicit_fn/implicit_fn is populated, selected by which add()
+    // overload built this entry), its domain/search box (if given; otherwise deferred to the plot's
+    // resolved window), and its color/line style/markers/sampling. Built entirely by add(); not
+    // constructed directly by callers.
+    //
+    // Field applicability by kind (arity):
+    //    explicit_fn                     - Set only when arity == 1.
+    //    implicit_fn                     - Set only when arity == 2.
+    //    color, has_explicit_color, type - Used by both kinds.
+    //    left_marker, right_marker       - Explicit only. Ignored for an implicit entry, which has
+    //                                      no well-defined curve "ends."
+    //    samples                        - Explicit only. Number of points sampled across the domain;
+    //                                      higher values draw a smoother curve at the cost of render
+    //                                      time.
+    //    grid_nx, grid_ny                - Implicit only. contour()'s search grid resolution; higher
+    //                                      values resolve thin or complex loops more accurately, at
+    //                                      the cost of render time.
+    //    x_min, x_max                    - Used by both kinds when set: the explicit function's
+    //                                      evaluation domain, or the implicit function's search box
+    //                                      x-range.
+    //    y_min, y_max                    - Implicit only. Ignored for an explicit entry.
+    //    x_min_set, x_max_set,
+    //    y_min_set, y_max_set            - Whether the corresponding bound was actually given. False
+    //                                      means the plot's resolved window edge is used instead.
+    struct PlotEntry {
+        int arity;
+        real_function_1 explicit_fn;
+        implicit_2 implicit_fn;
+        pen color;
+        bool has_explicit_color;
+        pen type;
+        string left_marker;
+        string right_marker;
+        int samples;
+        int grid_nx;
+        int grid_ny;
+        real x_min, x_max, y_min, y_max;
+        bool x_min_set, x_max_set;
+        bool y_min_set, y_max_set;
+    }
+
+    // Private/internal fields (users should access via getters/setters)
+    PlotEntry[] _entries;
+
+    // x-domain: default window left/right when neither is explicitly overridden. Independent of any
+    // individual function's own domain (see add() below) — this only affects the viewport.
     real _x_min;
     real _x_max;
 
     // Window: the viewport. Left/right default to the domain when unset; bottom/top are always
-    // auto-computed from sampled y-values unless explicitly overridden. These fields hold the most
-    // recently resolved values (refreshed on every render()), which is what the getters return.
+    // auto-computed from sampled y-values (of explicit functions only) unless explicitly overridden.
+    // These fields hold the most recently resolved values (refreshed on every render()), which is
+    // what the getters return.
     real _window_left;
     real _window_right;
     real _window_bottom;
@@ -80,16 +137,20 @@ struct ContinuousPlot {
     real _grid_delta_x;
     real _grid_delta_y;
 
+    // Margins around the plotted square, reserved for tick labels. The actual graph (axes, grid,
+    // curves) is drawn inside a square — the largest one that fits after these margins are
+    // subtracted from the given width/height — so nothing the plot draws can ever land outside the
+    // box it was given to render into. Default 1 (in the render unit) on all four sides.
+    real _margin_left;
+    real _margin_right;
+    real _margin_top;
+    real _margin_bottom;
+
     void operator init(real x_min = -5, real x_max = 5) {
         this._x_min = x_min;
         this._x_max = x_max;
 
-        this._functions = new real_function_1[];
-        this._left_markers = new string[];
-        this._right_markers = new string[];
-        this._has_explicit_color = new bool[];
-        this._explicit_colors = new pen[];
-        this._types = new pen[];
+        this._entries = new PlotEntry[];
 
         this._window_left = 0;
         this._window_right = 0;
@@ -105,9 +166,14 @@ struct ContinuousPlot {
         this._grid_enabled = false;
         this._grid_delta_x = 1;
         this._grid_delta_y = 1;
+
+        this._margin_left = 1;
+        this._margin_right = 1;
+        this._margin_top = 1;
+        this._margin_bottom = 1;
     }
 
-    // Add a function to the plot.
+    // Add an explicit function (y = f(x)) to the plot.
     //
     // color: any ordinary Asymptote pen (a named color, RGB(...), rgb(...), etc.) to
     // color-coordinate this function instead of letting the rainbow palette assign one. Left at
@@ -115,27 +181,73 @@ struct ContinuousPlot {
     // resolved at render() time via the theme's plot_function_colors(), against however many
     // functions are left on auto-color at that point; explicitly colored functions don't count
     // against that share, so the auto-colored ones still spread across the full gradient among
-    // themselves. color and type are separate parameters (rather than folded into one pen the
-    // caller composes with +) specifically so type can be set independently of an auto-assigned
-    // color — combining them into one pen would make "auto color, explicit type" inexpressible.
+    // themselves.
     //
-    // type: one of SOLID/DOTTED/DASHED/LONG_DASHED/DASH_DOTTED/LONG_DASH_DOTTED above (or any
-    // other Asymptote linetype pen). Applies only to the curve itself, not its endpoint markers,
-    // which are always drawn with a solid outline regardless.
+    // type: one of SOLID/DOTTED/DASHED/LONG_DASHED/DASH_DOTTED/LONG_DASH_DOTTED above (or any other
+    // Asymptote linetype pen). Applies only to the curve itself, not its endpoint markers, which are
+    // always drawn with a solid outline regardless.
     //
     // left_marker/right_marker set what's drawn at this function's true left/right ends (see the
     // ARROW/OPEN_DOT/CLOSED_DOT/OPEN_INTERVAL/CLOSED_INTERVAL/NONE constants above); AUTO's default
-    // is ARROW. These only apply to the function's overall first/last visible point — any other cut
-    // (an interior window-boundary crossing, or the start of a new run after a NaN gap) always
-    // draws with no marker, regardless of what's asked for at the function's true ends.
+    // is ARROW.
+    //
+    // samples controls how smooth the curve looks (points sampled across the domain).
+    //
+    // x_min/x_max: this function's own evaluation domain. Left unset (the default), the plot's own
+    // resolved window left/right is used instead — which is what most callers want, since the window
+    // already defines where the plot is looking. Override when this function needs a domain narrower
+    // or wider than the window, e.g. sqrt starting at x=0 even though the window extends further
+    // negative.
     void add(real_function_1 func, pen color = AUTO_COLOR, pen type = SOLID,
-             string left_marker = AUTO, string right_marker = AUTO) {
-        this._functions.push(func);
-        this._left_markers.push(left_marker);
-        this._right_markers.push(right_marker);
-        this._has_explicit_color.push(color != AUTO_COLOR);
-        this._explicit_colors.push(color);
-        this._types.push(type);
+             string left_marker = AUTO, string right_marker = AUTO, int samples = 200,
+             real x_min = UNSET_DOMAIN, real x_max = UNSET_DOMAIN) {
+        PlotEntry entry;
+        entry.arity = 1;
+        entry.explicit_fn = func;
+        entry.color = color;
+        entry.has_explicit_color = (color != AUTO_COLOR);
+        entry.type = type;
+        entry.left_marker = left_marker;
+        entry.right_marker = right_marker;
+        entry.samples = samples;
+        entry.x_min = x_min;
+        entry.x_max = x_max;
+        entry.x_min_set = (x_min == x_min);
+        entry.x_max_set = (x_max == x_max);
+        this._entries.push(entry);
+    }
+
+    // Add an implicit function (the curve f(x, y) = 0) to the plot.
+    //
+    // color/type: see the explicit add() overload above — same meaning, applies to the traced curve.
+    //
+    // nx/ny control contour()'s search grid resolution — higher values resolve thin or complex loops
+    // more accurately, at the cost of render time.
+    //
+    // x_min/x_max/y_min/y_max: the box to search for this function's curve. Left unset (the
+    // default), the plot's own resolved window is used instead — see the explicit overload's
+    // x_min/x_max for the same reasoning. Override when this curve needs a search box narrower or
+    // wider than the window.
+    void add(implicit_2 func, pen color = AUTO_COLOR, pen type = SOLID, int nx = 100, int ny = nx,
+              real x_min = UNSET_DOMAIN, real x_max = UNSET_DOMAIN,
+              real y_min = UNSET_DOMAIN, real y_max = UNSET_DOMAIN) {
+        PlotEntry entry;
+        entry.arity = 2;
+        entry.implicit_fn = func;
+        entry.color = color;
+        entry.has_explicit_color = (color != AUTO_COLOR);
+        entry.type = type;
+        entry.grid_nx = nx;
+        entry.grid_ny = ny;
+        entry.x_min = x_min;
+        entry.x_max = x_max;
+        entry.y_min = y_min;
+        entry.y_max = y_max;
+        entry.x_min_set = (x_min == x_min);
+        entry.x_max_set = (x_max == x_max);
+        entry.y_min_set = (y_min == y_min);
+        entry.y_max_set = (y_max == y_max);
+        this._entries.push(entry);
     }
 
     // Getters
@@ -149,10 +261,12 @@ struct ContinuousPlot {
     real get_grid_delta_x() { return this._grid_delta_x; }
     real get_grid_delta_y() { return this._grid_delta_y; }
     bool get_grid_mode() { return this._grid_enabled; }
+    real get_margin_left() { return this._margin_left; }
+    real get_margin_right() { return this._margin_right; }
+    real get_margin_top() { return this._margin_top; }
+    real get_margin_bottom() { return this._margin_bottom; }
 
     // Setters
-    void set_x_min(real x_min) { this._x_min = x_min; }
-    void set_x_max(real x_max) { this._x_max = x_max; }
     void set_window_left(real left) { this._window_left = left; this._window_left_set = true; }
     void set_window_right(real right) { this._window_right = right; this._window_right_set = true; }
     void set_window_bottom(real bottom) { this._window_bottom = bottom; this._window_bottom_set = true; }
@@ -181,15 +295,39 @@ struct ContinuousPlot {
         this._grid_enabled = true;
     }
 
+    // Margin setters. Each is independent; set only the ones that need to differ from the 1cm
+    // default (e.g. widen the left margin for functions whose y-values render as wide labels).
+    void set_margin_left(real margin) { this._margin_left = margin; }
+    void set_margin_right(real margin) { this._margin_right = margin; }
+    void set_margin_top(real margin) { this._margin_top = margin; }
+    void set_margin_bottom(real margin) { this._margin_bottom = margin; }
+
+    // Convenience: set all four margins to the same value at once.
+    void set_margins(real margin) {
+        this._margin_left = margin;
+        this._margin_right = margin;
+        this._margin_top = margin;
+        this._margin_bottom = margin;
+    }
+
+    // Convenience: set all four margins independently in one call.
+    void set_margins(real left, real right, real top, real bottom) {
+        this._margin_left = left;
+        this._margin_right = right;
+        this._margin_top = top;
+        this._margin_bottom = bottom;
+    }
+
     ////////////////////////////////////////////////////////////////////////////////////////////////
     // Function: render
     //
     // Description:
-    // Resolve the window from the domain and any explicit overrides, sample every added function,
-    // and draw the curves and axes into a picture. Resolution happens here rather than at add()
-    // time because the auto-computed bottom/top depend on every function that has been added so
-    // far, and functions can still be added after any earlier render(); resolved bounds are cached
-    // into this._window_* on each call so the getters reflect the last-rendered state.
+    // Resolve the window from the domain and any explicit overrides, sample every added explicit
+    // function (implicit functions aren't sampled — they're traced later via contour()), and draw
+    // the curves and axes into a picture. Resolution happens here rather than at add() time because
+    // the auto-computed bottom/top depend on every explicit function that has been added so far, and
+    // functions can still be added after any earlier render(); resolved bounds are cached into
+    // this._window_* on each call so the getters reflect the last-rendered state.
     //
     // Inputs:
     //    width  - Plot width in the given unit.
@@ -204,42 +342,55 @@ struct ContinuousPlot {
         unitsize(pic, unit);
 
         // Resolve the viewport: left/right default to the domain, bottom/top are resolved below
-        // once every function has been sampled.
+        // once every explicit function has been sampled.
         real left = this._window_left_set ? this._window_left : this._x_min;
         real right = this._window_right_set ? this._window_right : this._x_max;
 
-        // Sample only where domain and window overlap — the curve doesn't extend past the domain,
-        // and there's no need to sample outside the visible window.
-        real sample_min = max(this._x_min, left);
-        real sample_max = min(this._x_max, right);
-        bool has_range = sample_max > sample_min;
-
-        int sample_count = 200; // matches Asymptote's own graph module default (ngraph)
-        real[] sample_xs = new real[0];
-        real[][] sample_ys = new real[this._functions.length][];
+        // Sample every explicit entry (arity == 1) over the overlap of its own domain and the
+        // window — each entry can have its own domain and its own sample count, so both the sampled
+        // points and whether there's any overlap at all are tracked per entry rather than once for
+        // the whole plot. Implicit entries (arity == 2) contribute nothing here; they're searched
+        // later via contour() against their own box, independent of this sampling pass.
+        int n = this._entries.length;
+        real[][] entry_xs = new real[n][];
+        real[][] entry_ys = new real[n][];
+        bool[] entry_has_range = new bool[n];
 
         real hmin = 1e9;
         real hmax = -1e9;
 
-        if (has_range) {
-            sample_xs = new real[sample_count];
+        for (int f = 0; f < n; ++f) {
+            PlotEntry entry = this._entries[f];
+            if (entry.arity != 1) continue;
+
+            // An unset domain bound defers to the window's own edge — most functions have no
+            // domain narrower than what the plot is actually showing, so this is what add()'s
+            // default (no x_min/x_max given) relies on.
+            real func_x_min = entry.x_min_set ? entry.x_min : left;
+            real func_x_max = entry.x_max_set ? entry.x_max : right;
+            real sample_min = max(func_x_min, left);
+            real sample_max = min(func_x_max, right);
+            entry_has_range[f] = sample_max > sample_min;
+            if (!entry_has_range[f]) continue;
+
+            int sample_count = entry.samples;
+            real[] xs = new real[sample_count];
+            real[] ys = new real[sample_count];
             for (int i = 0; i < sample_count; ++i) {
-                sample_xs[i] = sample_min + i * (sample_max - sample_min) / (sample_count - 1);
+                real x = sample_min + i * (sample_max - sample_min) / (sample_count - 1);
+                real y = entry.explicit_fn(x);
+                xs[i] = x;
+                ys[i] = y;
+                if (y < hmin) hmin = y;
+                if (y > hmax) hmax = y;
             }
-            for (int f = 0; f < this._functions.length; ++f) {
-                real[] ys = new real[sample_count];
-                for (int i = 0; i < sample_count; ++i) {
-                    ys[i] = this._functions[f](sample_xs[i]);
-                    if (ys[i] < hmin) hmin = ys[i];
-                    if (ys[i] > hmax) hmax = ys[i];
-                }
-                sample_ys[f] = ys;
-            }
+            entry_xs[f] = xs;
+            entry_ys[f] = ys;
         }
 
         // Resolve bottom/top: auto-compute from sampled y-values with padding, unless overridden.
-        // Guard the case where nothing was sampled (no functions added, or a degenerate range) with
-        // a hardcoded fallback rather than letting an inverted hmin/hmax range through.
+        // Guard the case where nothing was sampled (no explicit functions in range, or none added
+        // at all) with a hardcoded fallback rather than letting an inverted hmin/hmax range through.
         real bottom = this._window_bottom;
         real top = this._window_top;
         if (!this._window_bottom_set || !this._window_top_set) {
@@ -263,46 +414,58 @@ struct ContinuousPlot {
         this._window_bottom = bottom;
         this._window_top = top;
 
-        // Mapping helpers: use one uniform scale for both axes so a data slope renders at its
-        // true geometric angle (e.g. a slope-1 line looks like an actual 45-degree line) —
-        // independently stretching x and y to fill width/height distorts slopes whenever the
-        // box's aspect ratio doesn't match the window's. The smaller of the two per-axis scales
-        // is used for both, and the resulting (smaller) render area is centered within the given
-        // width/height — like letterboxing — leaving blank margin on whichever axis had room to
-        // spare, rather than growing the numeric window to fill it.
+        // Reserve the margins first, then take the largest square that fits in what's left — the
+        // actual graph (axes, grid, curves) only ever draws inside that square, so tick labels
+        // drawn outward from it land in the margin, never outside the box this render() was given.
+        // Any slack left over (if the given box wasn't itself exactly square-after-margins) is
+        // split evenly, centering the square+margins block within the box.
+        real avail_w = width - this._margin_left - this._margin_right;
+        real avail_h = height - this._margin_top - this._margin_bottom;
+        real square_side = min(avail_w, avail_h);
+        real extra_w = avail_w - square_side;
+        real extra_h = avail_h - square_side;
+        real square_x0 = this._margin_left + extra_w / 2;
+        real square_y0 = this._margin_bottom + extra_h / 2;
+
+        // Within the square, fit the numeric window preserving its aspect ratio — same reasoning
+        // as before (a slope-1 line should render at an actual 45-degree angle), just measured
+        // against the square's side instead of the raw given width/height.
         real x_range = right - left;
         real y_range = top - bottom;
-        real scale = 1;
-        real render_width = width;
-        real render_height = height;
+        real data_scale = 1;
+        real data_render_w = square_side;
+        real data_render_h = square_side;
         if (x_range > 0 && y_range > 0) {
-            scale = min(width / x_range, height / y_range);
-            render_width = x_range * scale;
-            render_height = y_range * scale;
+            data_scale = min(square_side / x_range, square_side / y_range);
+            data_render_w = x_range * data_scale;
+            data_render_h = y_range * data_scale;
         }
-        real offset_x = (width - render_width) / 2;
-        real offset_y = (height - render_height) / 2;
+        real data_offset_x = square_x0 + (square_side - data_render_w) / 2;
+        real data_offset_y = square_y0 + (square_side - data_render_h) / 2;
 
         real mapx(real x) {
-            if (right == left) return offset_x;
-            return offset_x + (x - left) * scale;
+            if (right == left) return data_offset_x;
+            return data_offset_x + (x - left) * data_scale;
         }
         real mapy(real y) {
-            if (top == bottom) return offset_y;
-            return offset_y + (y - bottom) * scale;
+            if (top == bottom) return data_offset_y;
+            return data_offset_y + (y - bottom) * data_scale;
         }
 
-        // Where the axes themselves sit: at x=0/y=0 if that's inside the window, otherwise at the
-        // window's edge. Computed once here so both the grid (below) and the axes (drawn later)
-        // agree on exactly where "the axis" is.
+        // Whether each axis's true data value (0) actually falls inside the window — this decides
+        // both whether that axis gets drawn at all (only when visible, arrow-tipped, at its true
+        // interior position) and whether grid lines measure their spacing from 0 or from the
+        // window's edge.
         bool x0_in = (left <= 0 && right >= 0);
         bool y0_in = (bottom <= 0 && top >= 0);
         real axis_x_data = x0_in ? 0 : left;
         real axis_y_data = y0_in ? 0 : bottom;
 
-        // Draw the grid (if enabled) before the curves and axes, so both render on top of it.
-        // Lines start at the axes and extend outward every delta_x/delta_y — the axis's own
-        // position (k=0) is skipped, since the axis line itself is drawn separately, on top.
+        // Draw the grid (if enabled) before the axes and curves, so both render on top of it.
+        // Lines extend across the full window, spaced out from the axis position (0 if visible,
+        // otherwise the window's edge) by delta_x/delta_y — the axis's own position (k=0) is
+        // skipped, since the axis line itself (when visible) is drawn separately, on top. Bounded
+        // by mapx/mapy's own window range, so grid lines never reach outside the square.
         if (this._grid_enabled) {
             if (this._grid_delta_x > 0) {
                 int k_min = (int)ceil((left - axis_x_data) / this._grid_delta_x - 1e-9);
@@ -324,61 +487,73 @@ struct ContinuousPlot {
             }
         }
 
-        // Draw axes: choose zero-axis (x=0 or y=0) if inside window; otherwise draw edge axes.
-        // Arrow-tipped (axis_arrow is bidirectional) since the axis extends beyond the visible window.
-        // Tick/label sizing is based on the actual rendered plot area, not the full given box, so
-        // they stay proportionate to the plot even when it's letterboxed within a larger box.
-        // Drawn after the grid (so axes sit on top of it) but before the functions (so functions,
-        // drawn next in add() order, sit on top of the axes).
-        real tickLenX = render_width * 0.02;
-        real tickLenY = render_height * 0.02;
-        real labelOffsetX = render_width * 0.01;
-        real labelOffsetY = render_height * 0.02;
-
+        // Tick marks and their number labels always live at the square's own four edges —
+        // independent of where the data axis itself is drawn — so they're never crowded out by, or
+        // dependent on, whatever's happening in the interior. Ticks point outward, away from the
+        // square, into the margin reserved for them; labels sit just beyond the tick. Every tick
+        // value gets a label here, including 0 — there's no collision to avoid, since left-edge and
+        // bottom-edge labels never share a position. Drawn after the grid (so ticks sit on top of
+        // it) but before the axes/functions.
         real[] yTicks = compute_ticks(bottom, top, 5);
         real[] xTicks = compute_ticks(left, right, 6);
 
-        // When both axes cross zero, the "0" tick on each axis lands right at their shared
-        // intersection — labeling it twice (once west, once south) is redundant clutter. Skip
-        // both individual zero ticks in that case and draw a single "0" near the intersection
-        // instead, once the axes themselves are drawn below.
-        bool origin_visible = x0_in && y0_in;
-
-        real ax_m = mapx(axis_x_data);
-        draw(pic, (ax_m, mapy(bottom))--(ax_m, mapy(top)), p=axis_color + axis_thickness, arrow=axis_arrow);
         for (real t : yTicks) {
-            if (origin_visible && abs(t) < 1e-9) continue;
             real ym = mapy(t);
-            draw(pic, (ax_m, ym)--(ax_m + tickLenX, ym), p=axis_color + axis_thickness);
-            label(pic, string(t), (ax_m - tickLenX - labelOffsetX, ym), align=W, p=text_small);
+            draw(pic, (square_x0, ym)--(square_x0 - plot_tick_length, ym), p=axis_color + axis_thickness);
+            label(pic, string(t), (square_x0 - plot_tick_length - plot_tick_label_gap, ym),
+                  align=W, p=text_small);
         }
-
-        real ay_m = mapy(axis_y_data);
-        draw(pic, (mapx(left), ay_m)--(mapx(right), ay_m), p=axis_color + axis_thickness, arrow=axis_arrow);
         for (real t : xTicks) {
-            if (origin_visible && abs(t) < 1e-9) continue;
             real xm = mapx(t);
-            draw(pic, (xm, ay_m)--(xm, ay_m + tickLenY), p=axis_color + axis_thickness);
-            label(pic, string(t), (xm, ay_m - tickLenY - labelOffsetY), align=S, p=text_small);
+            draw(pic, (xm, square_y0)--(xm, square_y0 - plot_tick_length), p=axis_color + axis_thickness);
+            label(pic, string(t), (xm, square_y0 - plot_tick_length - plot_tick_label_gap),
+                  align=S, p=text_small);
         }
 
-        // Single "0" label at the axis intersection, offset diagonally into whichever quadrant
-        // encloses the least area — that's the quadrant least likely to already be busy with
-        // curves, so the label stays out of the way while still sitting next to the origin.
-        if (origin_visible) {
+        // Draw each data axis only when it's actually visible (its value, 0, falls inside the
+        // window) — arrow-tipped, at its true interior position, extending across the full square.
+        // An axis that doesn't cross the window gets no line at all; the tick marks and labels
+        // above already cover it fully from the edge. A visible axis additionally gets small
+        // crossing-ticks (no labels — the edge already has those) at the same tick values, so it
+        // reads the same way a normal graph's interior axis does.
+        if (x0_in) {
+            real ax_m = mapx(0);
+            draw(pic, (ax_m, mapy(bottom))--(ax_m, mapy(top)), p=axis_color + axis_thickness, arrow=axis_arrow);
+            for (real t : yTicks) {
+                real ym = mapy(t);
+                draw(pic, (ax_m - plot_tick_length / 2, ym)--(ax_m + plot_tick_length / 2, ym),
+                     p=axis_color + axis_thickness);
+            }
+        }
+        if (y0_in) {
+            real ay_m = mapy(0);
+            draw(pic, (mapx(left), ay_m)--(mapx(right), ay_m), p=axis_color + axis_thickness, arrow=axis_arrow);
+            for (real t : xTicks) {
+                real xm = mapx(t);
+                draw(pic, (xm, ay_m - plot_tick_length / 2)--(xm, ay_m + plot_tick_length / 2),
+                     p=axis_color + axis_thickness);
+            }
+        }
+
+        // When both axes are visible, also label their actual intersection with a single "0" —
+        // in addition to (not instead of) the ordinary 0 labels already on both edges above —
+        // offset diagonally into whichever quadrant encloses the least area, so it stays out of
+        // the way of curves while still marking the true origin.
+        if (x0_in && y0_in) {
+            real ax_m = mapx(0);
+            real ay_m = mapy(0);
             real area_top_right    = (right - 0) * (top - 0);
             real area_top_left     = (0 - left) * (top - 0);
             real area_bottom_right = (right - 0) * (0 - bottom);
             real area_bottom_left  = (0 - left) * (0 - bottom);
             real min_area = min(area_top_right, min(area_top_left, min(area_bottom_right, area_bottom_left)));
 
-            real zero_offset_x = tickLenX + labelOffsetX;
-            real zero_offset_y = tickLenY + labelOffsetY;
+            real zero_offset = plot_tick_length + plot_tick_label_gap;
             pair zero_pos;
-            if (min_area == area_bottom_left) zero_pos = (ax_m - zero_offset_x, ay_m - zero_offset_y);
-            else if (min_area == area_bottom_right) zero_pos = (ax_m + zero_offset_x, ay_m - zero_offset_y);
-            else if (min_area == area_top_left) zero_pos = (ax_m - zero_offset_x, ay_m + zero_offset_y);
-            else zero_pos = (ax_m + zero_offset_x, ay_m + zero_offset_y);
+            if (min_area == area_bottom_left) zero_pos = (ax_m - zero_offset, ay_m - zero_offset);
+            else if (min_area == area_bottom_right) zero_pos = (ax_m + zero_offset, ay_m - zero_offset);
+            else if (min_area == area_top_left) zero_pos = (ax_m - zero_offset, ay_m + zero_offset);
+            else zero_pos = (ax_m + zero_offset, ay_m + zero_offset);
 
             label(pic, "0", zero_pos, p=text_small);
         }
@@ -402,6 +577,23 @@ struct ContinuousPlot {
             return (x0 + t * (x1 - x0), target);
         }
 
+        // Trim a curve's drawn path back by plot_arrow_trim from whichever end is getting an ARROW
+        // marker, so the arrowhead sits fully inside the window rather than its tip landing exactly
+        // on (or poking through) the border — works uniformly regardless of which edge caused the
+        // cut (window boundary, domain edge, or a NaN gap), since it just shortens the already-built
+        // path by a fixed physical distance rather than recomputing where the cut happened. Left
+        // unchanged if the segment is too short to trim without collapsing it to nothing.
+        path trim_start(path p, real d) {
+            real len = arclength(p);
+            if (d <= 0 || d >= len) return p;
+            return subpath(p, arctime(p, d), length(p));
+        }
+        path trim_end(path p, real d) {
+            real len = arclength(p);
+            if (d <= 0 || d >= len) return p;
+            return subpath(p, 0, arctime(p, len - d));
+        }
+
         // Draw a non-arrow endpoint marker at a resolved (already-mapped) point. ARROW and "no
         // marker" are handled by the caller via draw()'s arrow= parameter instead — this only
         // covers the dot/interval styles, which need their own drawing calls.
@@ -420,69 +612,79 @@ struct ContinuousPlot {
             }
         }
 
-        // Draw each function's curve as a straight-segment polyline through its sampled points —
-        // preferred over Asymptote's spline (..) operator, which can overshoot near discontinuities
-        // (e.g. abs, piecewise functions). At sample_count=200 straight segments already look smooth.
-        // x is already sampled only within the window (see sample_min/sample_max above), but y is
-        // not — a function can still leave the window vertically within that x-range (e.g. a domain
-        // wider than the auto-computed or explicitly set y-window).
-        //
-        // Rather than drawing the full curve and clipping it afterward, each function is split into
-        // one path per contiguous run of in-window, defined points, cut exactly at the interpolated
-        // point where it crosses the top/bottom boundary (or, for a NaN-adjacent cut, at the last
-        // valid sample — see boundary_crossing()'s caller below). Segments are buffered rather than
-        // drawn immediately, so the function's overall first and last segments can be identified
-        // afterward: only their outer ends are eligible for the caller's left_marker/right_marker
-        // override; every interior cut always uses the ordinary AUTO default (no marker at all —
-        // whatever cut it, a window/domain edge or a NaN gap, the curve just stops cleanly there),
-        // regardless of what the caller asked for at the function's true ends.
-        if (has_range) {
-            // Resolve colors: explicitly colored functions keep exactly the pen given; every
-            // other function shares the rainbow palette, divided only among themselves — an
-            // explicitly colored function doesn't consume a slot that would otherwise spread the
-            // auto-colored ones further apart.
-            int auto_count = 0;
-            for (int f = 0; f < this._functions.length; ++f) {
-                if (!this._has_explicit_color[f]) ++auto_count;
+        // Resolve colors: explicitly colored entries keep exactly the pen given; every other entry
+        // — explicit or implicit alike — shares the rainbow palette, divided only among themselves.
+        // An explicitly colored entry doesn't consume a slot that would otherwise spread the
+        // auto-colored ones further apart.
+        int auto_count = 0;
+        for (int f = 0; f < n; ++f) {
+            if (!this._entries[f].has_explicit_color) ++auto_count;
+        }
+        pen[] auto_colors = plot_function_colors(auto_count);
+        pen[] colors = new pen[n];
+        int auto_idx = 0;
+        for (int f = 0; f < n; ++f) {
+            if (this._entries[f].has_explicit_color) {
+                colors[f] = this._entries[f].color;
+            } else {
+                colors[f] = auto_colors[auto_idx];
+                ++auto_idx;
             }
-            pen[] auto_colors = plot_function_colors(auto_count);
-            pen[] colors = new pen[this._functions.length];
-            int auto_idx = 0;
-            for (int f = 0; f < this._functions.length; ++f) {
-                if (this._has_explicit_color[f]) {
-                    colors[f] = this._explicit_colors[f];
-                } else {
-                    colors[f] = auto_colors[auto_idx];
-                    ++auto_idx;
-                }
-            }
+        }
 
-            for (int f = 0; f < this._functions.length; ++f) {
-                pen curve_pen = colors[f] + function_thickness + this._types[f];
+        // Draw each entry's curve, in add() order (so later entries sit on top of earlier ones,
+        // same as the axes sitting beneath every function).
+        for (int f = 0; f < n; ++f) {
+            PlotEntry entry = this._entries[f];
+            pen curve_pen = colors[f] + function_thickness + entry.type;
+
+            if (entry.arity == 1) {
+                // Draw the curve as a straight-segment polyline through its sampled points —
+                // preferred over Asymptote's spline (..) operator, which can overshoot near
+                // discontinuities (e.g. abs, piecewise functions). At sample_count=200 (the
+                // default) straight segments already look smooth. x is already sampled only within
+                // the window (see entry_xs above), but y is not — a function can still leave the
+                // window vertically within that x-range (e.g. a domain wider than the auto-computed
+                // or explicitly set y-window).
+                //
+                // Rather than drawing the full curve and clipping it afterward, the function is
+                // split into one path per contiguous run of in-window, defined points, cut exactly
+                // at the interpolated point where it crosses the top/bottom boundary (or, for a
+                // NaN-adjacent cut, at the last valid sample — see boundary_crossing()'s caller
+                // below). Segments are buffered rather than drawn immediately, so the function's
+                // overall first and last segments can be identified afterward: only their outer
+                // ends are eligible for the caller's left_marker/right_marker override; every
+                // interior cut always uses the ordinary AUTO default (no marker at all — whatever
+                // cut it, a window/domain edge or a NaN gap, the curve just stops cleanly there),
+                // regardless of what the caller asked for at the function's true ends.
+                if (!entry_has_range[f]) continue;
+
+                real[] xs = entry_xs[f];
+                real[] ys = entry_ys[f];
+                int sample_count = entry.samples;
 
                 path[] seg_paths = new path[];
-
                 path segment;
                 bool has_segment = false;
 
                 for (int i = 0; i < sample_count; ++i) {
-                    real yi = sample_ys[f][i];
+                    real yi = ys[i];
                     bool yi_finite = is_finite(yi);
                     bool yi_inside = yi_finite && yi >= bottom && yi <= top;
 
                     if (i == 0) {
                         if (yi_inside) {
-                            segment = (mapx(sample_xs[0]), mapy(yi));
+                            segment = (mapx(xs[0]), mapy(yi));
                             has_segment = true;
                         }
                         continue;
                     }
 
-                    real xprev = sample_xs[i - 1];
-                    real yprev = sample_ys[f][i - 1];
+                    real xprev = xs[i - 1];
+                    real yprev = ys[i - 1];
                     bool yprev_finite = is_finite(yprev);
                     bool yprev_inside = yprev_finite && yprev >= bottom && yprev <= top;
-                    real xi = sample_xs[i];
+                    real xi = xs[i];
 
                     if (yprev_inside && yi_inside) {
                         segment = segment -- (mapx(xi), mapy(yi));
@@ -509,8 +711,8 @@ struct ContinuousPlot {
                     seg_paths.push(segment);
                 }
 
-                string left_marker = this._left_markers[f];
-                string right_marker = this._right_markers[f];
+                string left_marker = entry.left_marker;
+                string right_marker = entry.right_marker;
 
                 for (int s = 0; s < seg_paths.length; ++s) {
                     bool is_first = (s == 0);
@@ -530,7 +732,14 @@ struct ContinuousPlot {
                     else if (start_marker == ARROW) seg_arrow = function_begin_arrow;
                     else if (end_marker == ARROW) seg_arrow = function_end_arrow;
 
-                    draw(pic, seg_paths[s], p=curve_pen, arrow=seg_arrow);
+                    // Trim only for the actual line draw — dot/interval markers below still anchor
+                    // to seg_paths[s]'s true (untrimmed) endpoints, since only ARROW ends need the
+                    // visual gap from the border.
+                    path draw_path = seg_paths[s];
+                    if (start_marker == ARROW) draw_path = trim_start(draw_path, plot_arrow_trim);
+                    if (end_marker == ARROW) draw_path = trim_end(draw_path, plot_arrow_trim);
+
+                    draw(pic, draw_path, p=curve_pen, arrow=seg_arrow);
 
                     if (start_marker != "" && start_marker != ARROW && start_marker != NONE) {
                         draw_endpoint_marker(start_marker, point(seg_paths[s], 0), colors[f], true);
@@ -540,8 +749,64 @@ struct ContinuousPlot {
                                               colors[f], false);
                     }
                 }
+            } else {
+                // Implicit: search this entry's own box for the f(x, y) = 0 curve via contour(),
+                // using a throwaway picture so the returned guides come back in raw (x, y) data
+                // coordinates — contour() draws through the picture's scale.x/y.T, which defaults to
+                // identity on a fresh picture — then remap each node through this render's own
+                // mapx/mapy before drawing, the same manual mapping every other element in this
+                // render uses (verified: a fresh picture's contour() output matches raw data
+                // coordinates directly, e.g. a circle of radius 2 comes back with node radii of
+                // ~2.0, not scaled or offset). No markers or arrows — a contour curve can be a
+                // closed loop or clipped by its own box with no well-defined "ends" the way a
+                // sampled explicit curve has.
+                real contour_adapter(real x, real y) {
+                    return entry.implicit_fn(x, y);
+                }
+
+                // An unset box bound defers to the window's own edge, same reasoning as the
+                // explicit domain fallback above — most implicit functions just want to be searched
+                // for wherever the plot is already looking.
+                real box_x_min = entry.x_min_set ? entry.x_min : left;
+                real box_x_max = entry.x_max_set ? entry.x_max : right;
+                real box_y_min = entry.y_min_set ? entry.y_min : bottom;
+                real box_y_max = entry.y_max_set ? entry.y_max : top;
+
+                picture raw_pic = new picture;
+                guide[][] level_guides = contour(raw_pic, contour_adapter,
+                                                  (box_x_min, box_y_min),
+                                                  (box_x_max, box_y_max),
+                                                  new real[] {0}, entry.grid_nx, entry.grid_ny);
+
+                picture curve_pic = new picture;
+                for (guide g : level_guides[0]) {
+                    int node_count = size(g);
+                    if (node_count == 0) continue;
+                    guide mapped;
+                    for (int k = 0; k < node_count; ++k) {
+                        pair p = point(g, k);
+                        pair mp = (mapx(p.x), mapy(p.y));
+                        mapped = (k == 0) ? mp : mapped -- mp;
+                    }
+                    if (cyclic(g)) mapped = mapped -- cycle;
+                    draw(curve_pic, mapped, p=curve_pen);
+                }
+                // Clip only this entry's curve (drawn onto a throwaway picture) to the visible
+                // window, rather than clipping pic itself, which would also cut off everything else
+                // already drawn (axes, grid, earlier functions).
+                clip(curve_pic, box((mapx(left), mapy(bottom)), (mapx(right), mapy(top))));
+                add(pic, curve_pic);
             }
         }
+
+        // Border along the viewing window's own square — same color/thickness as a data axis, but
+        // never arrow-tipped. Arrows are reserved for a data axis that's actually visible inside the
+        // window (drawn earlier above); this border just frames where the window itself sits,
+        // matching the same edges the tick marks are anchored to. Drawn last (after every function),
+        // so a curve that runs right up to the window edge sits underneath the border, not on top
+        // of it.
+        draw(pic, box((square_x0, square_y0), (square_x0 + square_side, square_y0 + square_side)),
+             p=axis_color + axis_thickness);
 
         // Debug: draw window border
         if (this._debug_mode) {
