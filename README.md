@@ -222,8 +222,9 @@ img.add(p);
 | Method | Purpose |
 |---|---|
 | `Plot(x_min=-5, x_max=5)` | Build the plot; also the default window left/right (see below) |
-| `add(f, color=AUTO_COLOR, type=SOLID, left_marker=AUTO, right_marker=AUTO, samples=200, x_min, x_max)` | Add an explicit function (`real_function_1`) |
-| `add(f, color=AUTO_COLOR, type=SOLID, nx=100, ny=nx, x_min, x_max, y_min, y_max)` | Add an implicit function (`implicit_2`) |
+| `add(f, color=AUTO_COLOR, type=SOLID, label="", left_marker=AUTO, right_marker=AUTO, samples=200, x_min, x_max)` | Add an explicit function (`real_function_1`) |
+| `add(f, color=AUTO_COLOR, type=SOLID, label="", nx=100, ny=nx, x_min, x_max, y_min, y_max)` | Add an implicit function (`implicit_2`) |
+| `legend(height=0)` | Build a standalone legend picture (see below) |
 | `set_window_left / set_window_right / set_window_bottom / set_window_top(real)` | Override one viewport edge |
 | `set_window(left, right, bottom, top)` | Set all four viewport edges at once |
 | `set_grid_delta_x / set_grid_delta_y(real)` | Change one grid spacing |
@@ -282,6 +283,25 @@ p.add(f, type=DASHED, color=red);       // fine: order doesn't matter once named
 ```
 
 The line type applies only to the curve itself — an explicit function's endpoint markers (dots, interval brackets) are always drawn with a solid outline regardless.
+
+**Legend.** Pass `label` on `add()` to name a function; `legend(height=0)` then builds a standalone legend picture — one row per added function, in `add()` order, each row a single left-aligned unit: a `2`cm line-style sample in that function's actual color and dash pattern, a small gap, then its label (not two independently aligned columns). A function left unlabeled falls back to `"Function N"`, numbered by its `add()` order. Colors are resolved the same way `render()` resolves them (via the same underlying method), so the legend always matches whatever the plot itself actually draws, even for auto-colored functions. Rows are top-aligned: the first added function's row is topmost, with each subsequent row extending downward.
+
+```asy
+Plot p = Plot(-10, 10);
+p.add(sin, color=blue, label="$\sin(x)$");
+p.add(cos, label="$\cos(x)$");   // auto-colored — legend() still shows its resolved color
+
+Image img = Image(10, 10);
+img.add(p);
+
+Gallery g = Gallery(1, 2, 10, 10);
+g.add(img.pic, 0, 0);
+g.add(p.legend(10), 0, 1);       // legend() returns a plain picture, addable like any other
+```
+
+**Pass the same height you gave the Gallery/Image to `legend()`.** `Gallery.add(picture, ...)` always anchors a picture's bottom-left corner to its cell's bottom-left corner and expects the picture to fill the whole cell — which a full-size `Plot` picture does, but a legend, sized only to its own content by default (`height=0`), doesn't; left at the default, it ends up hugging the bottom of a much taller cell instead of lining up with the plot. Passing `legend()`'s `height` argument to match places the top row at the same margin-inset height the plot's own square top sits at (`height - margin_top`), so the two align.
+
+Row spacing, the line sample's length, and the gap before the label are all theme constants (`legend_row_height`, `legend_line_length`, `legend_label_gap`).
 
 **Layout.** The actual graph — axes, grid, curves — is drawn inside a **square**, inset from `Plot`'s own render area by a margin on each side (`set_margin_left/right/top/bottom`, or `set_margins` for all four at once; `1` by default). The square is the largest one that fits after the margins are subtracted, so nothing a `Plot` draws can ever land outside the area `Image` gave it — the margins exist specifically to hold tick labels, which always live outside the square, in the margin. Widen a margin if your tick labels are unusually wide and start crowding the edge. The square's border is drawn last, after every function — so a curve that runs right up to the window's edge sits underneath the border rather than drawn on top of it.
 

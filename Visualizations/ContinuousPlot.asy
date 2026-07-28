@@ -76,6 +76,8 @@ struct ContinuousPlot {
     //    explicit_fn                     - Set only when arity == 1.
     //    implicit_fn                     - Set only when arity == 2.
     //    color, has_explicit_color, type - Used by both kinds.
+    //    label                           - Used by both kinds. Shown in legend()'s right column; if
+    //                                      never given, legend() falls back to "Function N".
     //    left_marker, right_marker       - Explicit only. Ignored for an implicit entry, which has
     //                                      no well-defined curve "ends."
     //    samples                        - Explicit only. Number of points sampled across the domain;
@@ -98,6 +100,7 @@ struct ContinuousPlot {
         pen color;
         bool has_explicit_color;
         pen type;
+        string label;
         string left_marker;
         string right_marker;
         int samples;
@@ -193,12 +196,15 @@ struct ContinuousPlot {
     //
     // samples controls how smooth the curve looks (points sampled across the domain).
     //
+    // label is shown in legend()'s right column, next to this function's line-style sample. Left at
+    // its default (empty), legend() falls back to "Function N" using this function's add() order.
+    //
     // x_min/x_max: this function's own evaluation domain. Left unset (the default), the plot's own
     // resolved window left/right is used instead — which is what most callers want, since the window
     // already defines where the plot is looking. Override when this function needs a domain narrower
     // or wider than the window, e.g. sqrt starting at x=0 even though the window extends further
     // negative.
-    void add(real_function_1 func, pen color = AUTO_COLOR, pen type = SOLID,
+    void add(real_function_1 func, pen color = AUTO_COLOR, pen type = SOLID, string label = "",
              string left_marker = AUTO, string right_marker = AUTO, int samples = 200,
              real x_min = UNSET_DOMAIN, real x_max = UNSET_DOMAIN) {
         PlotEntry entry;
@@ -207,6 +213,7 @@ struct ContinuousPlot {
         entry.color = color;
         entry.has_explicit_color = (color != AUTO_COLOR);
         entry.type = type;
+        entry.label = label;
         entry.left_marker = left_marker;
         entry.right_marker = right_marker;
         entry.samples = samples;
@@ -224,11 +231,14 @@ struct ContinuousPlot {
     // nx/ny control contour()'s search grid resolution — higher values resolve thin or complex loops
     // more accurately, at the cost of render time.
     //
+    // label: see the explicit add() overload above — same meaning, shown in legend()'s right column.
+    //
     // x_min/x_max/y_min/y_max: the box to search for this function's curve. Left unset (the
     // default), the plot's own resolved window is used instead — see the explicit overload's
     // x_min/x_max for the same reasoning. Override when this curve needs a search box narrower or
     // wider than the window.
-    void add(implicit_2 func, pen color = AUTO_COLOR, pen type = SOLID, int nx = 100, int ny = nx,
+    void add(implicit_2 func, pen color = AUTO_COLOR, pen type = SOLID, string label = "",
+              int nx = 100, int ny = nx,
               real x_min = UNSET_DOMAIN, real x_max = UNSET_DOMAIN,
               real y_min = UNSET_DOMAIN, real y_max = UNSET_DOMAIN) {
         PlotEntry entry;
@@ -237,6 +247,7 @@ struct ContinuousPlot {
         entry.color = color;
         entry.has_explicit_color = (color != AUTO_COLOR);
         entry.type = type;
+        entry.label = label;
         entry.grid_nx = nx;
         entry.grid_ny = ny;
         entry.x_min = x_min;
@@ -316,6 +327,31 @@ struct ContinuousPlot {
         this._margin_right = right;
         this._margin_top = top;
         this._margin_bottom = bottom;
+    }
+
+    // Resolve each entry's display color: explicitly colored entries keep exactly the pen given;
+    // every other entry — explicit or implicit alike — shares the rainbow palette, divided only
+    // among themselves, so an explicitly colored entry doesn't consume a slot that would otherwise
+    // spread the auto-colored ones further apart. Shared by render() and legend() so the legend
+    // always shows exactly the colors the plot itself draws.
+    pen[] resolve_colors() {
+        int n = this._entries.length;
+        int auto_count = 0;
+        for (int f = 0; f < n; ++f) {
+            if (!this._entries[f].has_explicit_color) ++auto_count;
+        }
+        pen[] auto_colors = plot_function_colors(auto_count);
+        pen[] colors = new pen[n];
+        int auto_idx = 0;
+        for (int f = 0; f < n; ++f) {
+            if (this._entries[f].has_explicit_color) {
+                colors[f] = this._entries[f].color;
+            } else {
+                colors[f] = auto_colors[auto_idx];
+                ++auto_idx;
+            }
+        }
+        return colors;
     }
 
     ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -612,25 +648,8 @@ struct ContinuousPlot {
             }
         }
 
-        // Resolve colors: explicitly colored entries keep exactly the pen given; every other entry
-        // — explicit or implicit alike — shares the rainbow palette, divided only among themselves.
-        // An explicitly colored entry doesn't consume a slot that would otherwise spread the
-        // auto-colored ones further apart.
-        int auto_count = 0;
-        for (int f = 0; f < n; ++f) {
-            if (!this._entries[f].has_explicit_color) ++auto_count;
-        }
-        pen[] auto_colors = plot_function_colors(auto_count);
-        pen[] colors = new pen[n];
-        int auto_idx = 0;
-        for (int f = 0; f < n; ++f) {
-            if (this._entries[f].has_explicit_color) {
-                colors[f] = this._entries[f].color;
-            } else {
-                colors[f] = auto_colors[auto_idx];
-                ++auto_idx;
-            }
-        }
+        // Resolve colors the same way legend() does, so the two always agree.
+        pen[] colors = this.resolve_colors();
 
         // Draw each entry's curve, in add() order (so later entries sit on top of earlier ones,
         // same as the axes sitting beneath every function).
@@ -811,6 +830,59 @@ struct ContinuousPlot {
         // Debug: draw window border
         if (this._debug_mode) {
             draw(pic, box((0,0),(width, height)), p=gray + linewidth(0.5));
+        }
+
+        return pic;
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    // Function: legend
+    //
+    // Description:
+    // Build a standalone legend: one row per added function, in add() order, a short line-style
+    // sample in its resolved color followed by its label, with a small gap between them — not two
+    // separately aligned columns, just one left-aligned unit per row. Rows are stacked from the top
+    // down: the first added function's row is the topmost, with each subsequent row extending
+    // downward. Colors are resolved via resolve_colors(), the same method render() uses, so the
+    // legend always matches whatever the plot itself actually draws.
+    //
+    // height is optional and only matters when placing the result in a Gallery cell (or any other
+    // fixed-height frame) alongside the plot: Gallery always anchors an added picture's bottom-left
+    // corner to its cell's bottom-left corner, so a legend that's only as tall as its own content
+    // (the default, height=0) ends up hugging the bottom of a much taller cell instead of lining up
+    // with the plot. Passing the same height given to that Gallery (or Image) positions the first
+    // row at the same margin-inset height the plot's own square top sits at, so the two align.
+    //
+    // Inputs:
+    //    height - Target frame height to align against (0, the default, sizes to content only).
+    //
+    // Outputs:
+    //    pic - The rendered legend picture.
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    picture legend(real height = 0) {
+        picture pic = new picture;
+        unitsize(pic, diagram_unit);
+
+        pen[] colors = this.resolve_colors();
+        int n = this._entries.length;
+
+        // Row 0 (the first added function) goes at the top, i.e. the highest y — this picture's
+        // y=0 is its bottom edge, matching every other visualization in this library (content spans
+        // (0,0) to (width,height), not the other way around), so placing row 0 at y=0 would instead
+        // anchor it at the bottom, with every later row trailing off even further below that. When a
+        // target height is given, the top row instead lines up with where the plot's own square top
+        // sits within that same height (height minus this plot's own top margin).
+        real top_y = (height > 0) ? (height - this._margin_top) : max(0, n - 1) * legend_row_height;
+
+        for (int i = 0; i < n; ++i) {
+            PlotEntry entry = this._entries[i];
+            real y = top_y - i * legend_row_height;
+
+            pen curve_pen = colors[i] + function_thickness + entry.type;
+            draw(pic, (0, y)--(legend_line_length, y), p=curve_pen);
+
+            string label_text = (entry.label != "") ? entry.label : ("Function " + string(i + 1));
+            label(pic, label_text, (legend_line_length + legend_label_gap, y), align=E, p=text_normal);
         }
 
         return pic;

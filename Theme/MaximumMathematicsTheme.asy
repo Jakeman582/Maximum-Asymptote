@@ -108,6 +108,11 @@ real plot_tick_length = 0.15;  // Full length of a tick mark: edge ticks extend 
                                 // each side of the axis line.
 real plot_tick_label_gap = 0.1;  // Gap between a tick mark's outer end and its label
 
+// Legend layout (Plot.legend())
+real legend_line_length = 2;    // Length of each row's line-style sample
+real legend_row_height = 0.5;   // Vertical spacing between legend rows
+real legend_label_gap = 0.3;    // Gap between a row's line sample and its label
+
 // Arrow/ray styling (used by RelationDiagram and other diagram types)
 arrowbar ray_arrow = ArcArrow(size = 4);
 pen ray_beginning = linewidth(4);
