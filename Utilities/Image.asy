@@ -74,7 +74,7 @@ struct Image {
 
         // Internal state
         this.pic = new picture;
-        unitsize(this.pic, 1cm);
+        unitsize(this.pic, diagram_unit);
         this.has_visual = false;
         this.rendered = false;
         this.debug_mode = false;

@@ -1,4 +1,4 @@
-unitsize(1cm);
+unitsize(diagram_unit);
 
 // Sample text to display
 string sample_text = "The quick brown fox jumps. 0123456789";

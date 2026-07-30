@@ -16,7 +16,7 @@ int total_chars = length(sample_chars);
 // Spacing between characters (will be adjusted based on visual testing)
 real spacing = 1.0 * 2.0 / 3.0 * 0.9 * 0.9 * 0.9 * 0.9 * 0.8 * 0.9;  // Reduced by 20%, then 10% from text_normal starting spacing
 
-unitsize(1cm);
+unitsize(diagram_unit);
 
 // Calculate image size
 real image_width = cols * spacing;

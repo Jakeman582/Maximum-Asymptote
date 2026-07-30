@@ -2,7 +2,7 @@ import MaximumMathematics;
 
 // Create a simple test diagram
 picture test_diagram = new picture;
-unitsize(test_diagram, 1cm);
+unitsize(test_diagram, diagram_unit);
 fill(test_diagram, box((0,0), (9,6)), yellow);
 label(test_diagram, "Test Diagram", (3, 2), p=fontsize(0.8cm));
 

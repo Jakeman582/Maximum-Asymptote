@@ -5,86 +5,51 @@
 // Central aesthetic configuration for Maximum Mathematics: colors, pens, arrow styles, layout
 // constants, and typography shared by every visualization. Swap in an alternate theme file to
 // restyle the whole library without touching visualization code.
-//
-// Organized top to bottom: general settings that apply across every visualization come first
-// (color palette, typography), followed by one section per visualization (or family of closely
-// related visualizations) for settings specific to it.
-//
-// This file only declares configuration — it never mutates currentpicture or any other global
-// drawing state (e.g. no bare unitsize() call). Every picture this library actually draws into
-// (Image's and Gallery's own pictures) sets its own unit explicitly, from diagram_unit below.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// General
+// Canvas
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-// Brand colors
+unitsize(1cm);  // Default picture unit for bare coordinates
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Color palette
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Main brand colors
 pen brand_color_1 = RGB(0, 0, 255);    // Blue
 pen brand_color_2 = RGB(255, 165, 0);  // Orange
 
-// Core palette — shared across multiple visualizations, or reserved for future use
+// Figure colors
 pen figure_background_color = white;
+
+// Table colors
+pen table_header = gray;
+pen table_sub_header = mediumgray;
+
+// Graphing colors
+pen axis_color = black;
+pen grid_color = mediumgray;
 pen function_color_1 = brand_color_1;
 pen function_color_2 = brand_color_2;
 pen slope_color_1 = gray;
 pen slope_color_2 = mediumgray;
 pen fill_pen = opacity(0.18);
 pen outline_pen = linewidth(0.6);
+
+// Tree diagram colors
 pen pruned_branch_color = RGB(255, 36, 0);
 
-// Header sizes (larger than text for visual distinction) - using Helvetica Bold
-pen header_1 = fontsize(1.2cm) + Helvetica("b");
-pen header_2 = fontsize(1.0cm) + Helvetica("b");
-pen header_3 = fontsize(0.8cm) + Helvetica("b");
-
-// Text sizes - using Helvetica
-pen text_large = fontsize(0.65cm) + Helvetica();
-pen text_normal = fontsize(0.55cm) + Helvetica();
-pen text_small = fontsize(0.45cm) + Helvetica();
-
-pen label_size = fontsize(0.45cm);
-
-// Math font is a document-wide LaTeX preamble setting, not a per-pen attribute, so it applies to
-// every $...$ label regardless of which pen renders it. eulervm gives math a classic calligraphic
-// look that contrasts with the sans-serif Helvetica body text above, and (unlike mathpazo/mathptmx)
-// it leaves the default text roman font alone, so it can't clash with the Helvetica pens.
-usepackage("eulervm");
-
-real diagram_unit = 1cm;  // Unit size for rendering any diagram
-
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// Graphing (Plot, DiscretePlot)
+// Plot color assignment
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Axis styling shared by both graphing visualizations
-pen axis_color = black;
-pen axis_thickness = linewidth(1.5);
-arrowbar axis_arrow = ArcArrows(size = 4);
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// Plot
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Grid and function line styling
-pen grid_color = mediumgray;
-pen grid_thickness = linewidth(0.2);
-pen function_thickness = linewidth(1.2);
-arrowbar function_arrow = ArcArrows(SimpleHead, size = 3);         // Both ends (interior segments)
-arrowbar function_begin_arrow = BeginArrow(SimpleHead, size = 3);  // Left end only
-arrowbar function_end_arrow = EndArrow(SimpleHead, size = 3);      // Right end only
-
-// Endpoint markers, arrow trimming, and tick layout
-real plot_endpoint_dot_radius = 0.08;  // Radius for OPEN_DOT/CLOSED_DOT curve endpoint markers
-real plot_arrow_trim = 0.1;            // Distance a curve is trimmed back from an ARROW-marked end, so the arrowhead doesn't visually overlap the viewing window's border
-real plot_tick_length = 0.15;          // Full length of a tick mark: edge ticks extend this far outward into the margin; interior axis-crossing ticks extend half this far on each side of the axis line
-real plot_tick_label_gap = 0.1;        // Gap between a tick mark's outer end and its label
 
 // The rainbow gradient sweeps hue from red (0 degrees) to violet (270 degrees) in HSV color space,
 // at full saturation and brightness, so it naturally passes through orange, yellow, green, blue,
 // and indigo along the way, giving the full ROYGBIV look.
-real rainbow_hue_start = 0;  // Red
-real rainbow_hue_end = 270;  // Violet
+real rainbow_hue_start = 0;    // Red
+real rainbow_hue_end = 270;    // Violet
 
 // HSV hue isn't perceptually uniform: human vision is far less sensitive to hue changes in the
 // yellow-green-cyan region than near the spectrum's red or violet ends, so a plain linear sweep
@@ -123,15 +88,32 @@ pen[] plot_function_colors(int n) {
     return colors;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Figure design
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Graphing/axis styling
+pen axis_thickness = linewidth(1.5);
+pen grid_thickness = linewidth(0.2);
+arrowbar axis_arrow = ArcArrows(size = 4);
+pen function_thickness = linewidth(1.2);
+arrowbar function_arrow = ArcArrows(SimpleHead, size = 3);        // both ends (interior segments)
+arrowbar function_begin_arrow = BeginArrow(SimpleHead, size = 3); // left end only
+arrowbar function_end_arrow = EndArrow(SimpleHead, size = 3);     // right end only
+real plot_endpoint_dot_radius = 0.08;  // Radius for OPEN_DOT/CLOSED_DOT curve endpoint markers
+real plot_arrow_trim = 0.1;  // Distance a curve is trimmed back from an ARROW-marked end, so the
+                              // arrowhead doesn't visually overlap the viewing window's border
+real plot_tick_length = 0.15;  // Full length of a tick mark: edge ticks extend this far outward into
+                                // the margin; interior axis-crossing ticks extend half this far on
+                                // each side of the axis line.
+real plot_tick_label_gap = 0.1;  // Gap between a tick mark's outer end and its label
+
 // Legend layout (Plot.legend())
-real legend_line_length = 2;   // Length of each row's line-style sample
-real legend_row_height = 0.5;  // Vertical spacing between legend rows
-real legend_label_gap = 0.3;   // Gap between a row's line sample and its label
+real legend_line_length = 2;    // Length of each row's line-style sample
+real legend_row_height = 0.5;   // Vertical spacing between legend rows
+real legend_label_gap = 0.3;    // Gap between a row's line sample and its label
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// SwitchingNetwork
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
+// Switching network styling (SwitchingNetwork)
 pen switch_thickness = linewidth(1.2);
 real switch_unit_width = 1.5;         // Width of a single leaf switch cell
 real switch_unit_height = 1.2;        // Height of a single leaf switch cell
@@ -140,29 +122,48 @@ real switch_tick_height = 0.35;       // Height of the diagonal open-switch tick
 real switch_lead_length = 0.4;        // Length of the input/output lead stubs on the whole network
 real switch_terminal_radius = 0.06;   // Radius of the filled terminal dot at each end of the network
 
-////////////////////////////////////////////////////////////////////////////////////////////////////
-// RelationDiagram
-////////////////////////////////////////////////////////////////////////////////////////////////////
-
-// Arrow/ray styling
+// Arrow/ray styling (used by RelationDiagram and other diagram types)
 arrowbar ray_arrow = ArcArrow(size = 4);
 pen ray_beginning = linewidth(4);
 
-// Zone layout
-real set_boundary_margin = 0.5;          // Line margin from set boundaries
-real label_zone_height = 2.0;            // Fixed height for label zones
-real element_zone_bottom_padding = 0.4;  // Padding at bottom to prevent label cutoff
-real element_zone_top_padding = 0.55;    // Padding below horizontal line (one font height for text_normal)
+// General styling
+pen label_size = fontsize(0.45cm);
 
-// Arrow/relation drawing
-real arrow_offset_amount = 0.15;             // Base offset amount for overlapping arrow targets
-real arrow_element_margin = 0.35;            // Margin from element labels for horizontal arrow segments
-real arrow_horizontal_length_max = 0.5;      // Maximum horizontal line length for arrows
+// Diagram layout constants (used by RelationDiagram and other diagram types)
+real set_boundary_margin = 0.5; // Line margin from set boundaries
+real diagram_unit = 1cm;        // Unit size for diagrams
+
+// Zone layout constants (used by RelationDiagram and other diagram types)
+real label_zone_height = 2.0;  // Fixed height for label zones
+real element_zone_bottom_padding = 0.4;  // Padding at bottom to prevent label cutoff
+real element_zone_top_padding = 0.55;  // Padding below horizontal line (one font height for text_normal)
+
+// Arrow/relation drawing constants (used by RelationDiagram and other diagram types)
+real arrow_offset_amount = 0.15;  // Base offset amount for overlapping arrow targets
+real arrow_element_margin = 0.35;  // Margin from element labels for horizontal arrow segments
+real arrow_horizontal_length_max = 0.5;  // Maximum horizontal line length for arrows
 real arrow_horizontal_length_factor = 0.05;  // Horizontal line length as fraction of diagram width
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// TruthTable
+// Typography
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pen table_header = gray;
-pen table_sub_header = mediumgray;
+// Header sizes (larger than text for visual distinction) - using Helvetica Bold
+pen header_1 = fontsize(1.2cm) + Helvetica("b");
+pen header_2 = fontsize(1.0cm) + Helvetica("b");
+pen header_3 = fontsize(0.8cm) + Helvetica("b");
+
+// Text sizes - using Helvetica
+pen text_large = fontsize(0.65cm) + Helvetica();
+pen text_normal = fontsize(0.55cm) + Helvetica();
+pen text_small = fontsize(0.45cm) + Helvetica();
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Math typography
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Math font is a document-wide LaTeX preamble setting, not a per-pen attribute, so it applies to
+// every $...$ label regardless of which pen renders it. eulervm gives math a classic calligraphic
+// look that contrasts with the sans-serif Helvetica body text above, and (unlike mathpazo/mathptmx)
+// it leaves the default text roman font alone, so it can't clash with the Helvetica pens.
+usepackage("eulervm");

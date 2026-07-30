@@ -5,7 +5,7 @@
 //   // Define an accumulation function: a_next = f(a_current)
 //   real accum_func(real x) { return x * 1.05; }
 //   AccumulationTable t = AccumulationTable(1000, 8, accum_func);
-//   picture p = t.render(12, 8, 1cm);
+//   picture p = t.render(12, 8, diagram_unit);
 //   add(currentpicture, p);
 //
 // The table shows three columns: Step | Accumulated | Change
@@ -72,7 +72,7 @@ struct AccumulationTable {
     // Render the table into a picture. Parameters follow the same pattern as
     // other Visualizations: render(width, height, unit) where width/height are
     // in diagram units and `unit` is the unitsize used for the picture.
-    picture render(real width, real height, real unit) {
+    picture render(real width, real height, real unit = diagram_unit) {
         picture pic = new picture;
         unitsize(pic, unit);
 

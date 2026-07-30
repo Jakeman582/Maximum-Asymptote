@@ -122,7 +122,7 @@ struct TruthTable {
     // Outputs:
     //    pic - The rendered picture containing the truth table.
     ////////////////////////////////////////////////////////////////////////////////////////////////////
-    picture render(real width, real height, real unit) {
+    picture render(real width, real height, real unit = diagram_unit) {
         picture pic = new picture;
         unitsize(pic, unit);
 

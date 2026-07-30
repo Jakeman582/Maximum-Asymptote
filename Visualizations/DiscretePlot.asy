@@ -167,7 +167,7 @@ struct DiscretePlot {
     }
 
     // Render the diagram into a picture; uses global styling pens
-    picture render(real width, real height, real unit) {
+    picture render(real width, real height, real unit = diagram_unit) {
         picture pic = new picture;
         unitsize(pic, unit);
 

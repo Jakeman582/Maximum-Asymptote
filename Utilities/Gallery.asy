@@ -77,7 +77,7 @@ struct Gallery {
         
         // Internal state
         this.pic = new picture;
-        unitsize(this.pic, 1cm);
+        unitsize(this.pic, diagram_unit);
         this.rendered = false;
     }
     
@@ -266,7 +266,7 @@ struct Gallery {
     void render() {
         // Clear previous render
         this.pic = new picture;
-        unitsize(this.pic, 1cm);
+        unitsize(this.pic, diagram_unit);
         
         // Calculate cell dimensions
         real cell_width = get_cell_width();
@@ -434,7 +434,7 @@ struct Gallery {
         // Always replace currentpicture with fresh gallery render
         // This ensures we don't have duplicates when re-rendering
         currentpicture = new picture;
-        unitsize(currentpicture, 1cm);
+        unitsize(currentpicture, diagram_unit);
         
         // Add gallery picture to currentpicture
         // Note: Even if this.pic appears empty, add it anyway - Asymptote will handle it
@@ -516,7 +516,7 @@ struct Gallery {
 
         // Make a copy of the picture when storing it to avoid reference issues
         picture pic_copy = new picture;
-        unitsize(pic_copy, 1cm);
+        unitsize(pic_copy, diagram_unit);
         add(pic_copy, pic);
 
         // Store picture copy in cell

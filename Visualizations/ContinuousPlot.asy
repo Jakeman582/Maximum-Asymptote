@@ -373,7 +373,7 @@ struct ContinuousPlot {
     // Outputs:
     //    pic - The rendered picture containing the plot.
     ////////////////////////////////////////////////////////////////////////////////////////////////
-    picture render(real width, real height, real unit) {
+    picture render(real width, real height, real unit = diagram_unit) {
         picture pic = new picture;
         unitsize(pic, unit);
 

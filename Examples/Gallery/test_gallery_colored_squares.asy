@@ -11,7 +11,7 @@ gallery.set_caption_height(0.8);
 // Helper function to create a colored square picture
 picture create_colored_square(real width, real height, pen color) {
     picture pic = new picture;
-    unitsize(pic, 1cm);
+    unitsize(pic, diagram_unit);
     fill(pic, box((0, 0), (width, height)), color);
     draw(pic, box((0, 0), (width, height)), black + linewidth(1));
     return pic;
