@@ -540,5 +540,15 @@ struct Image {
         );
         add_visual(diagram_pic);
     }
+
+    // Add SwitchingNetwork directly
+    void add(SwitchingNetwork network) {
+        picture diagram_pic = network.render(
+            get_diagram_width(),
+            get_diagram_height(),
+            diagram_unit
+        );
+        add_visual(diagram_pic);
+    }
 };
 

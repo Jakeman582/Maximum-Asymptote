@@ -19,6 +19,7 @@ include "Utilities/FunctionTypes.asy";
 include "Utilities/Functions/Line.asy";   // defines Line, a predefined implicit_2-producing function type
 include "Utilities/Functions/Conic.asy";  // defines Conic, a predefined implicit_2-producing function type
 include "Utilities/AxisTicks.asy";        // defines compute_ticks, used by DiscretePlot and Plot below
+include "Utilities/BooleanExpression.asy"; // defines ExprNode/parse_boolean_expression/normalize, used by SwitchingNetwork below
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Include RelationDiagram
@@ -29,6 +30,7 @@ include "Visualizations/DiscretePlot.asy";
 include "Visualizations/ContinuousPlot.asy";
 include "Visualizations/AccumulationTable.asy";
 include "Visualizations/TruthTable.asy";
+include "Visualizations/SwitchingNetwork.asy";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Include utilities

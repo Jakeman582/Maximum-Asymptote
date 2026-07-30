@@ -462,6 +462,38 @@ img.add(g);
 | `set_window(xmin, xmax, ymin, ymax)` | Set the view (equal min==max leaves that axis auto) |
 | `set_debug_mode(bool)` | Draw bounds |
 
+### SwitchingNetwork
+
+Draws a boolean expression as a switching (relay) network: a conjunction (`&`) becomes two sub-networks in **series** (current must pass through both), a disjunction (`|`) becomes two sub-networks in **parallel** (current can pass through either), and a variable — negated or not — becomes a single switch. Built from one expression string in a single-shot constructor:
+
+```asy
+SwitchingNetwork sn = SwitchingNetwork("(A & B) | (!A & C)");
+
+Image img = Image(10, 6);
+img.set_diagram_padding(0.5);
+img.caption_title("Figure:");
+img.caption_text("$(A \wedge B) \vee (\bar{A} \wedge C)$, a two-way multiplexer.");
+img.add(sn);
+```
+
+| Method | Purpose |
+|---|---|
+| `SwitchingNetwork(expression)` | Parse the expression and build the network |
+| `set_debug_mode(bool)` | Draw bounds |
+
+**Expression syntax** is programmer-style, not LaTeX — variables are plain identifiers, and operators are ASCII symbols:
+
+| Symbol | Meaning | Precedence |
+|---|---|---|
+| `!` | Negation | Tightest — binds before `&` and `|` |
+| `&` | Conjunction (AND) | Binds before `|` |
+| `\|` | Disjunction (OR) | Loosest |
+| `( )` | Grouping | Overrides the above |
+
+So `A & B | C` means `(A & B) | C`, and `!A & B` means `(!A) & B` — use parentheses whenever you mean something other than that. A negated variable is drawn with a bar over its label (e.g. `!A` renders as $\bar{A}$); the expression is converted to negation normal form internally (via De Morgan's laws) before layout, so `!(A & B)` draws identically to `!A | !B` — a real switching network can only negate a single variable's own switch, not an entire sub-network, so this conversion is what makes an expression like `!(A & B)` renderable at all.
+
+The whole network is uniformly scaled (preserving its proportions, centered) to fit the given width/height, the same letterboxing approach `Plot` uses. A short lead wire extends from each side of the network out to a filled terminal dot, marking its two overall connection points. Row spacing, switch size, lead-wire length, and terminal dot size are theme constants (`switch_unit_width`, `switch_unit_height`, `switch_parallel_spacing`, `switch_tick_height`, `switch_lead_length`, `switch_terminal_radius`, `switch_thickness`).
+
 ---
 
 ## Galleries
@@ -578,6 +610,7 @@ Maximum-Asymptote/
 │   │   └── Conic.asy              # Conic: predefined general conic section, implicit_2-ready
 │   ├── DefaultFunctions.asy      # identity, square
 │   ├── AxisTicks.asy             # Shared tick computation (Plot, DiscretePlot)
+│   ├── BooleanExpression.asy     # Boolean expression parser + NNF normalizer, used by SwitchingNetwork
 │   ├── Image.asy                 # Image: canvas, zones, captions, auto-render
 │   └── Gallery.asy               # Gallery: grid layout
 │
@@ -586,7 +619,8 @@ Maximum-Asymptote/
 │   ├── TruthTable.asy
 │   ├── AccumulationTable.asy
 │   ├── ContinuousPlot.asy        # Plot is a typedef alias for ContinuousPlot
-│   └── DiscretePlot.asy
+│   ├── DiscretePlot.asy
+│   └── SwitchingNetwork.asy
 │
 └── Examples/                     # Runnable examples, grouped by visualization
 ```

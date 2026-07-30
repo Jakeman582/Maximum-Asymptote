@@ -113,6 +113,15 @@ real legend_line_length = 2;    // Length of each row's line-style sample
 real legend_row_height = 0.5;   // Vertical spacing between legend rows
 real legend_label_gap = 0.3;    // Gap between a row's line sample and its label
 
+// Switching network styling (SwitchingNetwork)
+pen switch_thickness = linewidth(1.2);
+real switch_unit_width = 1.5;         // Width of a single leaf switch cell
+real switch_unit_height = 1.2;        // Height of a single leaf switch cell
+real switch_parallel_spacing = 0.4;   // Vertical gap between stacked OR branches
+real switch_tick_height = 0.35;       // Height of the diagonal open-switch tick mark
+real switch_lead_length = 0.4;        // Length of the input/output lead stubs on the whole network
+real switch_terminal_radius = 0.06;   // Radius of the filled terminal dot at each end of the network
+
 // Arrow/ray styling (used by RelationDiagram and other diagram types)
 arrowbar ray_arrow = ArcArrow(size = 4);
 pen ray_beginning = linewidth(4);
