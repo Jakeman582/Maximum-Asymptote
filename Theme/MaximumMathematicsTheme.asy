@@ -45,6 +45,8 @@ pen text_small = fontsize(0.45cm) + Helvetica();
 
 pen label_size = fontsize(0.45cm);
 
+real caption_line_leading = 1.15;  // Multiplier on a caption line's rendered height to get the spacing between wrapped lines; above 1 leaves visible leading, below 1 would overlap
+
 // Math font is a document-wide LaTeX preamble setting, not a per-pen attribute, so it applies to
 // every $...$ label regardless of which pen renders it. eulervm gives math a classic calligraphic
 // look that contrasts with the sans-serif Helvetica body text above, and (unlike mathpazo/mathptmx)
@@ -159,6 +161,31 @@ real arrow_offset_amount = 0.15;             // Base offset amount for overlappi
 real arrow_element_margin = 0.35;            // Margin from element labels for horizontal arrow segments
 real arrow_horizontal_length_max = 0.5;      // Maximum horizontal line length for arrows
 real arrow_horizontal_length_factor = 0.05;  // Horizontal line length as fraction of diagram width
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// GraphDiagram
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Vertex styling
+pen graph_vertex_fill = white;
+pen graph_vertex_outline = black;
+pen graph_vertex_thickness = linewidth(1.0);
+real graph_vertex_radius = 0.3;   // Also how far an edge stops short of a vertex center, so an arrowhead lands on the rim rather than under the circle
+
+// Edge styling
+pen graph_edge_color = black;
+pen graph_edge_thickness = linewidth(0.9);
+arrowbar graph_directed_arrow = EndArrow(SimpleHead, size = 5);
+real graph_edge_label_offset = 0.25;   // Perpendicular offset of an edge's label from the edge itself
+real graph_multi_edge_bow = 0.5;       // Perpendicular spacing between parallel edges joining the same pair of vertices
+real graph_edge_vertex_clearance = 0.15;  // Minimum gap an edge keeps from an unrelated vertex's rim when curving around it
+real graph_self_loop_size = 1.1;       // Control-point reach of a self-loop; larger makes a bigger loop
+real graph_self_loop_angle = 60;       // Angular half-width of a self-loop's attachment points at the vertex rim
+
+// Layout
+real graph_layout_margin = 0.5;    // Blank border reserved around the laid-out graph, so vertex circles and labels aren't clipped
+int graph_force_iterations = 300;  // Fruchterman-Reingold relaxation steps; higher settles more but costs render time
+int graph_random_seed = 1;         // Default seed for the RANDOM layout; the same seed always reproduces the same scatter
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // TruthTable

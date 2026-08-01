@@ -288,6 +288,17 @@ struct Image {
         return wrap_text(this.caption_text_text, text_width, text_normal);
     }
 
+    // Vertical distance between consecutive wrapped caption lines. Derived from the font's actual
+    // rendered height rather than a fixed constant, so lines can never overlap no matter the font
+    // size — a fixed value only happens to clear whichever size it was tuned against, and silently
+    // overlaps once the text renders taller than it (which is exactly what a hardcoded 0.5 did to
+    // text_normal, whose lines are really ~0.655 tall). Measured from one reference string carrying
+    // both an ascender and a descender, so every line is spaced identically instead of the gap
+    // shifting with whichever characters a given line happens to contain.
+    real get_caption_line_height() {
+        return measure_text_height("Ag", text_normal) * caption_line_leading;
+    }
+
     // Vertical space actually needed for the current caption content (title + wrapped text),
     // not including caption padding.
     real get_caption_content_height() {
@@ -301,7 +312,7 @@ struct Image {
             measure_text_height(text_lines[0], text_normal) : 0;
 
         real row_height = max(title_height, first_line_height);
-        real line_height = 0.5;  // Matches the per-line spacing used when rendering wrapped lines
+        real line_height = get_caption_line_height();  // Same spacing render_caption() lays out with
         real extra_lines_height = text_lines.length > 1 ? (text_lines.length - 1) * line_height : 0;
 
         return row_height + extra_lines_height;
@@ -389,9 +400,9 @@ struct Image {
 
         // Render text: left-aligned, starting at separator (with wrapping)
         if (text_lines.length > 0) {
-            // Calculate line spacing
-            // Use line height of ~0.5cm (about 0.91x font size) for readable spacing without overlap
-            real line_height = 0.5;
+            // Measured, not guessed — and the same value get_caption_content_height() sized the
+            // zone with, so the laid-out lines always fit the space reserved for them.
+            real line_height = get_caption_line_height();
 
             // Position first line at top (same y as title), subsequent lines below
             real text_top_y = content_top_y;
@@ -484,9 +495,19 @@ struct Image {
         // Mark as having visual
         this.has_visual = true;
         
-        // Auto-render to currentpicture
+        // Auto-render to currentpicture. Merged via the position-based add() (which internally calls
+        // this.pic.fit() before attaching it) rather than the plain picture-to-picture add() — the
+        // plain form defers fitting this.pic until currentpicture itself is shipped out, and scales
+        // this.pic's user-coordinate content (the background fill, every label's anchor position) by
+        // CURRENTPICTURE's own resolved transform rather than this.pic's own unitsize(diagram_unit).
+        // Since nothing in this library ever calls unitsize()/size() on currentpicture itself (by
+        // design — see the theme file's header comment), that transform resolves to the identity,
+        // collapsing every such position to a fraction of a point: the background fill shrank to a
+        // few points across, and successive caption lines landed almost on top of each other. Forcing
+        // this.pic to fit() itself first — using its own, explicitly-set scale — sidesteps the whole
+        // ambiguity, the same way the diagram add() two lines up already does.
         if (!this.rendered) {
-            add(currentpicture, this.pic);
+            add(currentpicture, this.pic, (0, 0));
             this.rendered = true;
         }
     }
@@ -544,6 +565,16 @@ struct Image {
     // Add SwitchingNetwork directly
     void add(SwitchingNetwork network) {
         picture diagram_pic = network.render(
+            get_diagram_width(),
+            get_diagram_height(),
+            diagram_unit
+        );
+        add_visual(diagram_pic);
+    }
+
+    // Add GraphDiagram directly
+    void add(GraphDiagram graph) {
+        picture diagram_pic = graph.render(
             get_diagram_width(),
             get_diagram_height(),
             diagram_unit

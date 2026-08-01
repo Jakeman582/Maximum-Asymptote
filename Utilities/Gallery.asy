@@ -483,6 +483,28 @@ struct Gallery {
         this.render();
     }
 
+    // Add visual to a cell (from GraphDiagram)
+    void add(GraphDiagram graph, int row, int col, string caption_label = "") {
+        if (row < 0 || row >= this.rows) {
+            abort("Gallery.add: Invalid row index " + (string)row);
+        }
+        if (col < 0 || col >= this.cols) {
+            abort("Gallery.add: Invalid column index " + (string)col);
+        }
+
+        picture diagram_pic = graph.render(
+            this.visual_width,
+            this.visual_height,
+            diagram_unit
+        );
+
+        this.cells[row][col].visual = diagram_pic;
+        this.cells[row][col].caption_label = caption_label;
+        this.cells[row][col].has_visual = true;
+
+        this.render();
+    }
+
     // Add visual to a cell (from SwitchingNetwork)
     void add(SwitchingNetwork network, int row, int col, string caption_label = "") {
         if (row < 0 || row >= this.rows) {
