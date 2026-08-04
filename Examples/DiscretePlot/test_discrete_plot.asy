@@ -20,8 +20,10 @@ DiscretePlot g = DiscretePlot(dt, first_x, "left", periods, value_func);
 g.set_window(-0.5, periods + 0.5, 0, 0); // ymin==ymax triggers auto-compute in the struct
 // Optional: styling
 
-Image img = Image(16, 6);
-img.set_diagram_padding(0.5);
+Image img = Image();
+img.width(16);
+img.height(6);
+img.padding(0.5);
 img.caption_title("Figure");
 img.caption_text("Compound interest accumulation (discrete, per-period)");
 img.add(g); // Image.add supports diagrams with render()

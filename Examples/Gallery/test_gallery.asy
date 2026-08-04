@@ -1,12 +1,12 @@
 import MaximumMathematics;
 
 // Create a gallery with 2 rows and 2 columns
-Gallery gallery = Gallery(2, 2, visual_width=4, visual_height=5);
-
-// Set gallery-wide settings
-gallery.set_margin(0.5);
-gallery.set_padding(0.3);
-gallery.set_caption_height(0.8);
+Gallery gallery = Gallery(2, 2);
+gallery.width(10);
+gallery.height(10);
+gallery.padding(0.3);
+gallery.margin(0.3);
+gallery.label_scheme(LOWERCASE);
 
 // Create relation diagrams for each cell
 RelationDiagram diagram1 = RelationDiagram();
@@ -29,8 +29,11 @@ diagram4.add_set(new string[] {"7", "8"}, "G");
 diagram4.add_set(new string[] {"g", "h"}, "H");
 diagram4.add_relation(0, 1, new pair[] {(0,1), (1,0)});
 
-// Add diagrams to gallery with captions
-gallery.add(diagram1, 0, 0, "Figure 1: First relation");
-gallery.add(diagram2, 0, 1, "Figure 2: Second relation");
-gallery.add(diagram3, 1, 0, "Figure 3: Third relation");
-gallery.add(diagram4, 1, 1, "Figure 4: Fourth relation");
+// Add diagrams in row-major order: top-left, top-right, bottom-left, bottom-right
+gallery.add(diagram1);
+gallery.add(diagram2);
+gallery.add(diagram3);
+gallery.add(diagram4);
+
+gallery.caption_title("Figure 1");
+gallery.caption_text("Four example relations between small finite sets.");

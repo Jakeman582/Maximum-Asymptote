@@ -12,8 +12,10 @@ real accum_func(real x) {
 
 AccumulationTable table = AccumulationTable(principal, periods, accum_func, "Compound Interest (5 percent)");
 
-Image img = Image(18, 9);
-img.set_diagram_padding(0.5);
+Image img = Image();
+img.width(18);
+img.height(9);
+img.padding(0.5);
 
 // Directly add the table to the Image (Image.add overload was added)
 img.add(table);

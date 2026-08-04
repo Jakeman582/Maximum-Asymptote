@@ -1,0 +1,6 @@
+# Jekyll (docs/ site)
+docs/_site/
+docs/.jekyll-cache/
+docs/.jekyll-metadata
+docs/Gemfile.lock
+docs/_config_preview.yml

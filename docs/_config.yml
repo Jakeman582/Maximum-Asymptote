@@ -1,0 +1,37 @@
+title: Maximum Mathematics
+description: >-
+  A comprehensive Asymptote library for creating professional mathematical
+  diagrams and visualizations.
+baseurl: "/Maximum-Asymptote"
+url: "https://jakeman582.github.io"
+
+remote_theme: just-the-docs/just-the-docs
+
+# just-the-docs settings
+color_scheme: light
+search_enabled: true
+heading_anchors: true
+
+nav_sort: case_insensitive
+
+defaults:
+  - scope:
+      path: ""
+    values:
+      layout: default
+
+aux_links:
+  "View on GitHub":
+    - "https://github.com/Jakeman582/Maximum-Asymptote"
+aux_links_new_tab: true
+
+footer_content: "Maximum Mathematics — created by Jacob Hiance."
+
+callouts:
+  note:
+    color: blue
+  warning:
+    color: yellow
+
+plugins:
+  - jekyll-remote-theme

@@ -46,6 +46,7 @@ pen text_small = fontsize(0.45cm) + Helvetica();
 pen label_size = fontsize(0.45cm);
 
 real caption_line_leading = 1.15;  // Multiplier on a caption line's rendered height to get the spacing between wrapped lines; above 1 leaves visible leading, below 1 would overlap
+real image_caption_padding = 0.3;  // Fixed breathing room around Image's caption title/text, on every side -- internal only, not user-configurable
 
 // Math font is a document-wide LaTeX preamble setting, not a per-pen attribute, so it applies to
 // every $...$ label regardless of which pen renders it. eulervm gives math a classic calligraphic
@@ -53,7 +54,19 @@ real caption_line_leading = 1.15;  // Multiplier on a caption line's rendered he
 // it leaves the default text roman font alone, so it can't clash with the Helvetica pens.
 usepackage("eulervm");
 
+// amssymb supplies extra math symbols beyond plain LaTeX's own set -- e.g. \veebar, the exclusive-or
+// symbol TruthTable's expr_to_latex() renders for ^. Without it, \veebar is an undefined control
+// sequence and shipout fails outright.
+usepackage("amssymb");
+
 real diagram_unit = 1cm;  // Unit size for rendering any diagram
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Debugging
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+pen debug_primary_pen = black + linewidth(0.6);              // Structural boundaries: the outer picture/visualization/cell borders
+pen debug_secondary_pen = black + dotted + linewidth(0.4);   // Internal separators: caption/label zone dividers
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Graphing (Plot, DiscretePlot)
@@ -191,5 +204,55 @@ int graph_random_seed = 1;         // Default seed for the RANDOM layout; the sa
 // TruthTable
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-pen table_header = gray;
-pen table_sub_header = mediumgray;
+// Grid lines: the outer border, the boundary between atomic-proposition and expression columns, and
+// the boundary between the header row and the data rows all use the theme's own outline_pen; every
+// other row/column separator uses half its thickness.
+pen table_minor_pen = linewidth(linewidth(outline_pen) / 2);
+
+// Cell backgrounds -- four independently colored categories.
+pen table_variable_header_color = rgb(0.90, 0.90, 0.90);    // Atomic-proposition header cells: light gray
+pen table_expression_header_color = rgb(1.00, 0.90, 0.75);  // Expression header cells: light tinted orange (brand_color_2)
+pen table_variable_value_color = rgb(0.85, 0.90, 1.00);     // Atomic-proposition value cells: light tinted blue (brand_color_1)
+pen table_expression_value_color = white;                   // Every other ("interior") cell: fixed white, independent of any Image/Gallery background
+
+// Highlight variants -- brighter/more saturated than the standard cell colors above, but still soft
+// enough to keep the cell's text legible.
+pen table_expression_header_highlight_color = rgb(1.00, 0.80, 0.55);  // Brighter orange
+pen table_variable_value_highlight_color = rgb(0.70, 0.80, 1.00);     // Brighter blue
+pen table_highlight_color = rgb(1.00, 1.00, 0.80);                    // Soft pastel yellow, for a highlighted interior cell
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+// Gallery
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+real gallery_caption_padding = 0.3;  // Fixed breathing room around the gallery-wide caption's title/text, on every side
+real gallery_label_padding = 0.1;    // Fixed breathing room above/below a cell label, inside its label zone
+
+// Cell background tints for color_scheme -- deliberately light/pastel rather than fully saturated,
+// so a visualization drawn on top (its own lines, fills, and labels) stays legible. Each hue has a
+// light and dark shade: the solid scheme (e.g. RED) fills every cell with the light shade, and the
+// matching checkerboard scheme (e.g. CHECKERBOARD_RED) alternates between the two.
+pen gallery_red_light    = rgb(1.00, 0.85, 0.85);
+pen gallery_red_dark     = rgb(1.00, 0.70, 0.70);
+pen gallery_orange_light = rgb(1.00, 0.90, 0.75);
+pen gallery_orange_dark  = rgb(1.00, 0.80, 0.55);
+pen gallery_yellow_light = rgb(1.00, 1.00, 0.80);
+pen gallery_yellow_dark  = rgb(1.00, 1.00, 0.60);
+pen gallery_green_light  = rgb(0.85, 1.00, 0.85);
+pen gallery_green_dark   = rgb(0.70, 1.00, 0.70);
+pen gallery_blue_light   = rgb(0.85, 0.90, 1.00);
+pen gallery_blue_dark    = rgb(0.70, 0.80, 1.00);
+pen gallery_indigo_light = rgb(0.85, 0.80, 1.00);
+pen gallery_indigo_dark  = rgb(0.70, 0.60, 1.00);
+pen gallery_violet_light = rgb(0.95, 0.85, 1.00);
+pen gallery_violet_dark  = rgb(0.90, 0.70, 1.00);
+pen gallery_brown_light  = rgb(0.90, 0.80, 0.70);
+pen gallery_brown_dark   = rgb(0.80, 0.65, 0.50);
+pen gallery_gray_light   = rgb(0.92, 0.92, 0.92);
+pen gallery_gray_dark    = rgb(0.80, 0.80, 0.80);
+
+// CHECKERBOARD (no color suffix) alternates between the theme's own two brand colors, lightened the
+// same way the named-hue schemes are -- full-strength brand_color_1/2 are too saturated to sit
+// behind a visualization's own lines and stay legible.
+pen gallery_brand_1_tint = rgb(0.80, 0.80, 1.00);
+pen gallery_brand_2_tint = rgb(1.00, 0.87, 0.70);

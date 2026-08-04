@@ -7,9 +7,11 @@ import MaximumMathematics;
 
 SwitchingNetwork sn = SwitchingNetwork("(A & B) | (!A & C)");
 
-Image img = Image(10, 10);
-img.set_diagram_padding(0.5);
-img.caption_title("Figure:");
+Image img = Image();
+img.width(10);
+img.height(10);
+img.padding(0.5);
+img.caption_title("Figure");
 img.caption_text("$(A \wedge B) \vee (\bar{A} \wedge C)$, a two-way multiplexer.");
 img.add(sn);
 

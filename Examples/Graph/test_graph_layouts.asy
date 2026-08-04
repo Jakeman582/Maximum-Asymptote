@@ -23,12 +23,19 @@ Graph circular_graph = Graph();   build_cube(circular_graph);   circular_graph.s
 Graph bipartite_graph = Graph();  build_cube(bipartite_graph);  bipartite_graph.set_layout(BIPARTITE);
 Graph grid_graph = Graph();       build_cube(grid_graph);       grid_graph.set_layout(GRID);
 
-Gallery gallery = Gallery(2, 2, 7, 7);
-gallery.set_margin(0.5);
-gallery.set_padding(0.3);
-gallery.add(force_graph, 0, 0, "FORCE");
-gallery.add(circular_graph, 0, 1, "CIRCULAR");
-gallery.add(bipartite_graph, 1, 0, "BIPARTITE");
-gallery.add(grid_graph, 1, 1, "GRID");
+Gallery gallery = Gallery(2, 2);
+gallery.width(14);
+gallery.height(14);
+gallery.padding(0.3);
+gallery.label_scheme(NUMERIC);
+
+// Added in row-major order: (1) FORCE, (2) CIRCULAR, (3) BIPARTITE, (4) GRID.
+gallery.add(force_graph);
+gallery.add(circular_graph);
+gallery.add(bipartite_graph);
+gallery.add(grid_graph);
+
+gallery.caption_title("Figure 1");
+gallery.caption_text("The same graph under four layouts, in row-major order: (1) FORCE, (2) CIRCULAR, (3) BIPARTITE, (4) GRID.");
 
 // Note: run `asy Examples/Graph/test_graph_layouts.asy` to render

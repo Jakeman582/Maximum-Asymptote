@@ -1,532 +1,370 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Image - Main container for visualizations
-// 
+//
+// An Image is a container used to house and display a visualization along with an optional
+// caption. `width`/`height` describe the visualization's own area only -- when a caption is
+// present, it's stacked below that area and adds its own (auto-sized) height on top, rather than
+// being carved out of the height you set. See get_total_width()/get_total_height() for the actual
+// rendered picture's dimensions.
+//
 // Note: This file expects the following to be defined in the including scope:
 //   - text_normal (typography pen)
 //   - wrap_text() function (from Utilities/TextWrapping.asy)
-//   - RelationDiagram struct (from Visualizations/RelationDiagram.asy)
-//   - diagram_unit (real, unit size for diagrams)
+//   - measure_text_size() / measure_text_height() (from Utilities/TextMeasurement.asy)
+//   - RelationDiagram/DiscretePlot/Plot/AccumulationTable/TruthTable/SwitchingNetwork/GraphDiagram
+//     structs (from Visualizations/*.asy)
+//   - diagram_unit, caption_line_leading, image_caption_padding, debug_primary_pen
+//     (from Theme/MaximumMathematicsTheme.asy)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 struct Image {
-    // Dimensions
-    real width;
-    real height;
-    
-    // Margins (outside edge) - only 4 values needed
-    real margin_left;
-    real margin_right;
-    real margin_top;
-    real margin_bottom;
-    
-    // Diagram padding (inside diagram zone) - only 4 values needed
-    real diagram_padding_left;
-    real diagram_padding_right;
-    real diagram_padding_top;
-    real diagram_padding_bottom;
-    
-    // Caption padding (inside caption zone) - only 4 values needed
-    real caption_padding_left;
-    real caption_padding_right;
-    real caption_padding_top;
-    real caption_padding_bottom;
-    
+    // Dimensions of the visualization area only (see the file header for why).
+    real _width;
+    real _height;
+
+    // Padding around the visualization, inside its own width x height box.
+    real _padding_left;
+    real _padding_top;
+    real _padding_right;
+    real _padding_bottom;
+
     // Styling
-    pen background_color;
-    
+    pen _background_color;
+
     // Caption configuration
-    string caption_title_text;
-    string caption_text_text;
-    real caption_title_width_factor;
-    
+    string _caption_title_text;
+    string _caption_text_text;
+
     // Internal state
     picture pic;
     bool has_visual;
     bool rendered;
-    bool debug_mode;
-    
-    // Constructor
-    void operator init(real width = 10, real height = 8) {
-        this.width = width;
-        this.height = height;
-        
-        // Initialize all properties to 0
-        this.margin_left = 0;
-        this.margin_right = 0;
-        this.margin_top = 0;
-        this.margin_bottom = 0;
-        
-        this.diagram_padding_left = 0;
-        this.diagram_padding_right = 0;
-        this.diagram_padding_top = 0;
-        this.diagram_padding_bottom = 0;
-        
-        this.caption_padding_left = 0;
-        this.caption_padding_right = 0;
-        this.caption_padding_top = 0;
-        this.caption_padding_bottom = 0;
-        
-        // Defaults
-        this.background_color = white;
-        this.caption_title_text = "";
-        this.caption_text_text = "";
-        this.caption_title_width_factor = 0.2;  // 20% for title, 80% for text
 
-        // Internal state
+    // Constructor. Takes no size -- set width/height with the methods below.
+    void operator init() {
+        this._width = 10;
+        this._height = 8;
+
+        this._padding_left = 0;
+        this._padding_top = 0;
+        this._padding_right = 0;
+        this._padding_bottom = 0;
+
+        this._background_color = white;
+        this._caption_title_text = "";
+        this._caption_text_text = "";
+
         this.pic = new picture;
         unitsize(this.pic, diagram_unit);
         this.has_visual = false;
         this.rendered = false;
-        this.debug_mode = false;
     }
 
-    // Dimension setters
-    void set_width(real w) {
-        this.width = w;
+    // Dimensions (of the visualization area -- see the file header)
+    void width(real w) { this._width = w; }
+    void height(real h) { this._height = h; }
+
+    // Visualization padding. Overloaded by argument count rather than one call per combination:
+    // padding(p) sets all four sides, padding(h, v) sets horizontal then vertical, and
+    // padding(l, t, r, b) sets each side independently.
+    void padding(real p) {
+        this._padding_left = p;
+        this._padding_right = p;
+        this._padding_top = p;
+        this._padding_bottom = p;
     }
 
-    void set_height(real h) {
-        this.height = h;
+    void padding(real horizontal, real vertical) {
+        this._padding_left = horizontal;
+        this._padding_right = horizontal;
+        this._padding_top = vertical;
+        this._padding_bottom = vertical;
     }
 
-    // Margin setters
-    void set_margin(real m) {
-        this.margin_left = m;
-        this.margin_right = m;
-        this.margin_top = m;
-        this.margin_bottom = m;
-    }
-    
-    void set_margin_horizontal(real m) {
-        this.margin_left = m;
-        this.margin_right = m;
-    }
-    
-    void set_margin_vertical(real m) {
-        this.margin_top = m;
-        this.margin_bottom = m;
-    }
-    
-    void set_margin_left(real m) {
-        this.margin_left = m;
-    }
-    
-    void set_margin_right(real m) {
-        this.margin_right = m;
-    }
-    
-    void set_margin_top(real m) {
-        this.margin_top = m;
-    }
-    
-    void set_margin_bottom(real m) {
-        this.margin_bottom = m;
-    }
-    
-    // Diagram padding setters
-    void set_diagram_padding(real p) {
-        this.diagram_padding_left = p;
-        this.diagram_padding_right = p;
-        this.diagram_padding_top = p;
-        this.diagram_padding_bottom = p;
-    }
-    
-    void set_diagram_padding_horizontal(real p) {
-        this.diagram_padding_left = p;
-        this.diagram_padding_right = p;
-    }
-    
-    void set_diagram_padding_vertical(real p) {
-        this.diagram_padding_top = p;
-        this.diagram_padding_bottom = p;
-    }
-    
-    void set_diagram_padding_left(real p) {
-        this.diagram_padding_left = p;
-    }
-    
-    void set_diagram_padding_right(real p) {
-        this.diagram_padding_right = p;
-    }
-    
-    void set_diagram_padding_top(real p) {
-        this.diagram_padding_top = p;
-    }
-    
-    void set_diagram_padding_bottom(real p) {
-        this.diagram_padding_bottom = p;
-    }
-    
-    // Caption padding setters
-    void set_caption_padding(real p) {
-        this.caption_padding_left = p;
-        this.caption_padding_right = p;
-        this.caption_padding_top = p;
-        this.caption_padding_bottom = p;
-    }
-    
-    void set_caption_padding_horizontal(real p) {
-        this.caption_padding_left = p;
-        this.caption_padding_right = p;
-    }
-    
-    void set_caption_padding_vertical(real p) {
-        this.caption_padding_top = p;
-        this.caption_padding_bottom = p;
-    }
-    
-    void set_caption_padding_left(real p) {
-        this.caption_padding_left = p;
-    }
-    
-    void set_caption_padding_right(real p) {
-        this.caption_padding_right = p;
-    }
-    
-    void set_caption_padding_top(real p) {
-        this.caption_padding_top = p;
-    }
-    
-    void set_caption_padding_bottom(real p) {
-        this.caption_padding_bottom = p;
-    }
-    
-    // Other setters
-    void set_background_color(pen color) {
-        this.background_color = color;
-    }
-    
-    void set_caption_title_width_factor(real factor) {
-        this.caption_title_width_factor = factor;
+    void padding(real left, real top, real right, real bottom) {
+        this._padding_left = left;
+        this._padding_top = top;
+        this._padding_right = right;
+        this._padding_bottom = bottom;
     }
 
-    void set_debug_mode(bool enable) {
-        this.debug_mode = enable;
+    void padding_horizontal(real p) {
+        this._padding_left = p;
+        this._padding_right = p;
     }
-    
-    bool get_debug_mode() {
-        return this.debug_mode;
+
+    void padding_vertical(real p) {
+        this._padding_top = p;
+        this._padding_bottom = p;
     }
-    
-    // Caption methods
-    void caption_title(string title) {
-        this.caption_title_text = title;
-    }
-    
-    void caption_text(string text) {
-        this.caption_text_text = text;
-    }
-    
-    // Helper: Get effective margin
-    real get_margin_left() {
-        return this.margin_left;
-    }
-    
-    real get_margin_right() {
-        return this.margin_right;
-    }
-    
-    real get_margin_top() {
-        return this.margin_top;
-    }
-    
-    real get_margin_bottom() {
-        return this.margin_bottom;
-    }
-    
-    // Helper: Get effective diagram padding
-    real get_diagram_padding_left() {
-        return this.diagram_padding_left;
-    }
-    
-    real get_diagram_padding_right() {
-        return this.diagram_padding_right;
-    }
-    
-    real get_diagram_padding_top() {
-        return this.diagram_padding_top;
-    }
-    
-    real get_diagram_padding_bottom() {
-        return this.diagram_padding_bottom;
-    }
-    
-    // Helper: Get effective caption padding
-    real get_caption_padding_left() {
-        return this.caption_padding_left;
-    }
-    
-    real get_caption_padding_right() {
-        return this.caption_padding_right;
-    }
-    
-    real get_caption_padding_top() {
-        return this.caption_padding_top;
-    }
-    
-    real get_caption_padding_bottom() {
-        return this.caption_padding_bottom;
-    }
-    
-    // Helper: Check if caption zone is needed
+
+    void padding_left(real p) { this._padding_left = p; }
+    void padding_top(real p) { this._padding_top = p; }
+    void padding_right(real p) { this._padding_right = p; }
+    void padding_bottom(real p) { this._padding_bottom = p; }
+
+    // Styling
+    void background_color(pen p) { this._background_color = p; }
+
+    // Caption content
+    void caption_title(string title) { this._caption_title_text = title; }
+    void caption_text(string text) { this._caption_text_text = text; }
+
+    // Helper: whether a caption zone exists at all.
     bool has_caption() {
-        return length(this.caption_title_text) > 0 || length(this.caption_text_text) > 0;
+        return length(this._caption_title_text) > 0 || length(this._caption_text_text) > 0;
     }
 
-    // Helper: Get diagram zone dimensions
-    real get_diagram_zone_width() {
-        return this.width;
+    // The literal string drawn for the title, including the auto-inserted ": " when text follows
+    // it -- caption_title("Figure 1") + caption_text("A curve.") renders as "Figure 1: A curve.",
+    // not "Figure 1A curve.". A lone title (no text to introduce) gets no colon.
+    string get_caption_title_display() {
+        if (length(this._caption_title_text) == 0) return "";
+        if (length(this._caption_text_text) == 0) return this._caption_title_text;
+        return this._caption_title_text + ": ";
     }
 
-    // Wrap the caption text to fit the current width and caption padding. Pure function of
-    // current state, safe to call more than once per render (e.g. once to size the caption
-    // zone, once to lay it out).
+    // Width of get_caption_title_display() -- how far the first line of caption text needs to
+    // start from the content's left edge to leave room for the title (and its auto-colon).
+    real get_caption_title_width() {
+        string display = get_caption_title_display();
+        if (length(display) == 0) return 0;
+        return measure_text_size(display, text_normal).x;
+    }
+
+    // Wrap the caption text to fit next to the title on the first line. Every line (including
+    // continuations) wraps to this same width -- a hanging indent under the title, rather than
+    // continuation lines restarting at the content's left edge under the title itself.
     string[] get_wrapped_caption_lines() {
-        if (length(this.caption_text_text) == 0) return new string[];
-        real content_width = get_diagram_zone_width() - get_caption_padding_left() - get_caption_padding_right();
-        real text_width = content_width * (1.0 - this.caption_title_width_factor);
-        return wrap_text(this.caption_text_text, text_width, text_normal);
+        if (length(this._caption_text_text) == 0) return new string[];
+        real content_width = this._width - 2 * image_caption_padding;
+        real first_line_width = max(0.5, content_width - get_caption_title_width());
+        return wrap_text(this._caption_text_text, first_line_width, text_normal);
     }
 
     // Vertical distance between consecutive wrapped caption lines. Derived from the font's actual
     // rendered height rather than a fixed constant, so lines can never overlap no matter the font
-    // size — a fixed value only happens to clear whichever size it was tuned against, and silently
-    // overlaps once the text renders taller than it (which is exactly what a hardcoded 0.5 did to
-    // text_normal, whose lines are really ~0.655 tall). Measured from one reference string carrying
-    // both an ascender and a descender, so every line is spaced identically instead of the gap
-    // shifting with whichever characters a given line happens to contain.
+    // size. Measured from one reference string carrying both an ascender and a descender, so every
+    // line is spaced identically instead of the gap shifting with whichever characters a given
+    // line happens to contain.
     real get_caption_line_height() {
         return measure_text_height("Ag", text_normal) * caption_line_leading;
     }
 
-    // Vertical space actually needed for the current caption content (title + wrapped text),
-    // not including caption padding.
+    // Vertical space actually needed for the current caption content (title + wrapped text), not
+    // including caption padding.
     real get_caption_content_height() {
         if (!has_caption()) return 0;
 
-        real title_height = length(this.caption_title_text) > 0 ?
-            measure_text_height(this.caption_title_text, text_normal) : 0;
+        real title_height = length(this._caption_title_text) > 0 ?
+            measure_text_height(get_caption_title_display(), text_normal) : 0;
 
         string[] text_lines = get_wrapped_caption_lines();
         real first_line_height = text_lines.length > 0 ?
             measure_text_height(text_lines[0], text_normal) : 0;
 
         real row_height = max(title_height, first_line_height);
-        real line_height = get_caption_line_height();  // Same spacing render_caption() lays out with
+        real line_height = get_caption_line_height();
         real extra_lines_height = text_lines.length > 1 ? (text_lines.length - 1) * line_height : 0;
 
         return row_height + extra_lines_height;
     }
 
-    // Helper: Get caption zone height (0 if no caption). Auto-sized to exactly fit the current
-    // caption content plus its padding, so the zone can't overflow or leave dead space regardless
-    // of image width, font size, or how many lines the text wraps to.
+    // Caption zone height (0 if no caption). Auto-sized to exactly fit the current caption content
+    // plus its padding, so the zone can't overflow or leave dead space regardless of image width,
+    // font size, or how many lines the text wraps to -- there's no direct setter for this.
     real get_caption_zone_height() {
         if (!has_caption()) return 0;
-        return get_caption_content_height() + get_caption_padding_top() + get_caption_padding_bottom();
+        return get_caption_content_height() + 2 * image_caption_padding;
     }
 
-    real get_diagram_zone_height() {
-        return this.height - get_caption_zone_height();
+    // Total rendered picture dimensions. Width always matches the visualization's own width (the
+    // caption zone spans the same width). Height is the visualization's own height plus the
+    // caption zone's height stacked below it (0 if there's no caption) -- unlike the
+    // visualization's height, this isn't something you set directly.
+    real get_total_width() {
+        return this._width;
     }
-    
-    // Helper: Get actual diagram drawing area (diagram zone minus padding)
-    real get_diagram_width() {
-        return get_diagram_zone_width() - get_diagram_padding_left() - get_diagram_padding_right();
+
+    real get_total_height() {
+        return this._height + get_caption_zone_height();
     }
-    
-    real get_diagram_height() {
-        return get_diagram_zone_height() - get_diagram_padding_top() - get_diagram_padding_bottom();
+
+    // The visualization's own actual rendering area: its declared width/height minus padding.
+    real get_visual_width() {
+        return this._width - this._padding_left - this._padding_right;
     }
-    
-    // Helper: Get diagram origin position (bottom-left of diagram drawing area)
-    pair get_diagram_origin() {
-        real x = get_diagram_padding_left();
-        real y = get_caption_zone_height() + get_diagram_padding_bottom();
+
+    real get_visual_height() {
+        return this._height - this._padding_top - this._padding_bottom;
+    }
+
+    // Bottom-left corner of the visualization's padded rendering area, in the overall image's
+    // coordinate system (y=0 is the bottom of the whole rendered picture -- the caption zone, if
+    // present, or the visualization itself if not).
+    pair get_visual_origin() {
+        real x = this._padding_left;
+        real y = get_caption_zone_height() + this._padding_bottom;
         return (x, y);
     }
-    
-    // Helper: Get caption zone origin (bottom-left of caption zone)
-    pair get_caption_zone_origin() {
-        real x = 0;
-        real y = 0;
-        return (x, y);
-    }
-    
+
     // Render caption
     void render_caption() {
         if (!has_caption()) return;
-        
-        // Caption zone dimensions
-        real caption_zone_width = get_diagram_zone_width();
-        pair caption_origin = get_caption_zone_origin();
-        
-        // Available space for caption content (after padding)
-        real content_left = caption_origin.x + get_caption_padding_left();
-        real content_bottom = caption_origin.y + get_caption_padding_bottom();
-        real content_width = caption_zone_width - get_caption_padding_left() - get_caption_padding_right();
-        real content_height = get_caption_zone_height() - get_caption_padding_top() - get_caption_padding_bottom();
 
-        // Split content width
-        real title_width = content_width * this.caption_title_width_factor;
+        real zone_height = get_caption_zone_height();
+        real content_left = image_caption_padding;
 
-        // Add small spacing before separator
-        real separator_spacing = 0.03;
-
-        // Wrap the caption text up front so its first line's height can be measured below —
-        // title and the first text line share one row. Reuses the same wrapping the zone was
-        // auto-sized from, so the content matches exactly what get_caption_zone_height() planned for.
+        string title_display = get_caption_title_display();
+        real title_width = get_caption_title_width();
         string[] text_lines = get_wrapped_caption_lines();
 
         // Position at top of content area. label() centers vertically on the point given, so the
-        // anchor is offset up by half the row's actual measured height — not a fixed guess — which
-        // is what guarantees the row stays within the content area regardless of font size or
-        // content (a fixed offset only happens to fit whichever font size it was tuned against).
-        real title_height = length(this.caption_title_text) > 0 ?
-            measure_text_height(this.caption_title_text, text_normal) : 0;
+        // anchor is offset up by half the row's actual measured height -- not a fixed guess --
+        // which is what guarantees the row stays within the content area regardless of font size.
+        real title_height = length(this._caption_title_text) > 0 ?
+            measure_text_height(title_display, text_normal) : 0;
         real first_line_height = text_lines.length > 0 ?
             measure_text_height(text_lines[0], text_normal) : 0;
         real row_height = max(title_height, first_line_height);
-        real content_top_y = content_bottom + content_height - row_height / 2;
+        real top_row_y = zone_height - image_caption_padding - row_height / 2;
 
-        // Render title: right-aligned, ending slightly left of separator, just below top border
-        real title_y = content_top_y;  // Position just below top border
-        if (length(this.caption_title_text) > 0) {
-            real title_x = content_left + title_width - separator_spacing;
-            label(this.pic, this.caption_title_text,
-                  (title_x, title_y),
-                  align=W, p=text_normal);
+        // Title: left-aligned at the content area's left edge (not right-aligned toward a fixed
+        // column boundary -- the "boundary" here is however wide the title actually is, not a
+        // preset fraction of the width).
+        if (length(title_display) > 0) {
+            label(this.pic, title_display, (content_left, top_row_y), align=E, p=text_normal);
         }
 
-        // Render text: left-aligned, starting at separator (with wrapping)
+        // Text: left-aligned starting right after the title (and its auto-colon), wrapping below
+        // at the same indent.
         if (text_lines.length > 0) {
-            // Measured, not guessed — and the same value get_caption_content_height() sized the
-            // zone with, so the laid-out lines always fit the space reserved for them.
             real line_height = get_caption_line_height();
-
-            // Position first line at top (same y as title), subsequent lines below
-            real text_top_y = content_top_y;
-
-            // Render each line (first line at top, subsequent lines below)
+            real text_x = content_left + title_width;
             for (int i = 0; i < text_lines.length; ++i) {
-                real line_y = text_top_y - i * line_height;
-                label(this.pic, text_lines[i],
-                      (content_left + title_width, line_y),
-                      align=E, p=text_normal);
+                real line_y = top_row_y - i * line_height;
+                label(this.pic, text_lines[i], (text_x, line_y), align=E, p=text_normal);
             }
         }
     }
-    
+
+    // Draws debug boundaries directly onto the already-rendered image: a border around the
+    // entire rendered picture, the padded visualization area's own border, and, when a caption
+    // is present, the zone/title separators. Must be called after add()/add_visual() -- there's
+    // nothing to outline until the image has actually been rendered. Whether debug information
+    // appears depends entirely on calling this method, not on any stored flag: call it and the
+    // boundaries are drawn immediately; never call it and they never exist. Calling it more than
+    // once simply redraws the same lines on top of themselves.
+    void debug() {
+        if (!this.has_visual) {
+            abort("Image.debug: call add()/add_visual() before debug()");
+        }
+
+        real total_width = get_total_width();
+        real total_height = get_total_height();
+        real caption_zone_height = get_caption_zone_height();
+
+        // Drawn into a standalone overlay, rather than directly, so the same content can be
+        // merged into both this.pic (so it stays part of the image if reused later, e.g. via
+        // Gallery.add_visual(image.pic)) and currentpicture (so it's visible right away)
+        // without disturbing anything currentpicture already holds -- unlike a full re-render,
+        // this never wipes out unrelated content added there in the meantime.
+        picture overlay = new picture;
+        unitsize(overlay, diagram_unit);
+
+        // Border around the entire rendered picture (visualization area plus caption zone, if
+        // any).
+        draw(overlay, box((0, 0), (total_width, total_height)), p=debug_primary_pen);
+
+        // Border around the padded visualization content area -- where the diagram is actually
+        // centered and drawn, inset from the declared width x height box by padding on each
+        // side (not the declared box itself).
+        pair debug_visual_origin = get_visual_origin();
+        draw(overlay, box(debug_visual_origin,
+                         debug_visual_origin + (get_visual_width(), get_visual_height())),
+             p=debug_primary_pen);
+
+        if (has_caption()) {
+            // Separator between the visualization area and the caption area, spanning the full
+            // width.
+            draw(overlay, (0, caption_zone_height)--(total_width, caption_zone_height), p=debug_primary_pen);
+
+            // Boundary between title and text -- only meaningful when both are present.
+            if (length(this._caption_title_text) > 0 && length(this._caption_text_text) > 0) {
+                real separator_x = image_caption_padding + get_caption_title_width();
+                draw(overlay, (separator_x, 0)--(separator_x, caption_zone_height), p=debug_primary_pen);
+            }
+        }
+
+        add(this.pic, overlay, (0, 0));
+        add(currentpicture, overlay, (0, 0));
+    }
+
     // Add visual and auto-render
     void add_visual(picture diagram) {
         if (this.has_visual) return;  // Only allow one visual per image
-        
-        if (this.debug_mode) {
-            // DEBUG: Draw entire margin area (light red) - extends outside the image bounds
-            pen light_red = rgb(1.0, 0.8, 0.8);
-            real outer_left = -get_margin_left();
-            real outer_right = this.width + get_margin_right();
-            real outer_bottom = -get_margin_bottom();
-            real outer_top = this.height + get_margin_top();
-            fill(this.pic, box((outer_left, outer_bottom), (outer_right, outer_top)), light_red);
-        }
-        
-        // Draw actual image area (using background color)
-        fill(this.pic, box((0, 0), (this.width, this.height)), this.background_color);
-        
-        if (this.debug_mode) {
-            // DEBUG: Draw diagram zone (light green)
-            pen light_green = rgb(0.8, 1.0, 0.8);
-            real diagram_zone_x = 0;
-            real diagram_zone_y = get_caption_zone_height();
-            real diagram_zone_width = get_diagram_zone_width();
-            real diagram_zone_height = get_diagram_zone_height();
-            fill(this.pic, box((diagram_zone_x, diagram_zone_y), 
-                              (diagram_zone_x + diagram_zone_width, diagram_zone_y + diagram_zone_height)), 
-                 light_green);
-            
-            // DEBUG: Draw actual diagram area border (dark green)
-            pen dark_green = rgb(0.0, 0.5, 0.0) + linewidth(2);
-            pair diagram_origin = get_diagram_origin();
-            real diagram_width = get_diagram_width();
-            real diagram_height = get_diagram_height();
-            draw(this.pic, box(diagram_origin, 
-                              (diagram_origin.x + diagram_width, diagram_origin.y + diagram_height)), 
-                 p=dark_green);
-            
-            // DEBUG: Draw caption zone (light blue) if it exists
-            if (has_caption()) {
-                pen light_blue = rgb(0.8, 0.8, 1.0);
-                pair caption_origin = get_caption_zone_origin();
-                real caption_zone_width = get_diagram_zone_width();
-                real caption_zone_height = get_caption_zone_height();
-                fill(this.pic, box(caption_origin, 
-                                  (caption_origin.x + caption_zone_width, caption_origin.y + caption_zone_height)), 
-                     light_blue);
-                
-                // DEBUG: Draw caption content area border (dark blue)
-                pen dark_blue = rgb(0.0, 0.0, 0.5) + linewidth(2);
-                real content_left = caption_origin.x + get_caption_padding_left();
-                real content_bottom = caption_origin.y + get_caption_padding_bottom();
-                real content_width = caption_zone_width - get_caption_padding_left() - get_caption_padding_right();
-                real content_height = caption_zone_height - get_caption_padding_top() - get_caption_padding_bottom();
-                draw(this.pic, box((content_left, content_bottom), 
-                                  (content_left + content_width, content_bottom + content_height)), 
-                     p=dark_blue);
-                
-                // DEBUG: Draw separator between caption title and text (dark blue)
-                real title_width = content_width * this.caption_title_width_factor;
-                real separator_x = content_left + title_width;
-                draw(this.pic, (separator_x, content_bottom)--(separator_x, content_bottom + content_height), 
-                     p=dark_blue);
-            }
-            
-            // DEBUG: Draw black border around overall image
-            draw(this.pic, box((0, 0), (this.width, this.height)), p=black + linewidth(3));
-        }
-        
-        // Add diagram at calculated position
-        pair diagram_pos = get_diagram_origin();
+
+        real total_width = get_total_width();
+        real total_height = get_total_height();
+
+        // Draw actual image area (using background color) -- spans the full rendered picture,
+        // visualization plus caption zone (if any).
+        fill(this.pic, box((0, 0), (total_width, total_height)), this._background_color);
+
+        // Add diagram, centered within the visualization's padded rendering area. Every
+        // visualization's render() is documented to fill the given width x height exactly, so for
+        // them this centering is a no-op (zero slack to center within); it matters for a picture
+        // smaller than the area -- e.g. a raw picture passed to add_visual() directly -- which
+        // would otherwise sit anchored to the area's bottom-left corner instead of centered in the
+        // space actually given to it.
+        pair zone_origin = get_visual_origin();
+        real zone_width = get_visual_width();
+        real zone_height = get_visual_height();
+        pair content_min = min(diagram, true);
+        pair content_max = max(diagram, true);
+        pair diagram_pos = zone_origin + (
+            (zone_width - (content_max.x - content_min.x)) / 2 - content_min.x,
+            (zone_height - (content_max.y - content_min.y)) / 2 - content_min.y
+        );
         add(this.pic, diagram, diagram_pos);
-        
+
         // Render caption
         render_caption();
-        
+
         // Mark as having visual
         this.has_visual = true;
-        
-        // Auto-render to currentpicture. Merged via the position-based add() (which internally calls
-        // this.pic.fit() before attaching it) rather than the plain picture-to-picture add() — the
-        // plain form defers fitting this.pic until currentpicture itself is shipped out, and scales
-        // this.pic's user-coordinate content (the background fill, every label's anchor position) by
-        // CURRENTPICTURE's own resolved transform rather than this.pic's own unitsize(diagram_unit).
-        // Since nothing in this library ever calls unitsize()/size() on currentpicture itself (by
-        // design — see the theme file's header comment), that transform resolves to the identity,
-        // collapsing every such position to a fraction of a point: the background fill shrank to a
-        // few points across, and successive caption lines landed almost on top of each other. Forcing
-        // this.pic to fit() itself first — using its own, explicitly-set scale — sidesteps the whole
-        // ambiguity, the same way the diagram add() two lines up already does.
+
+        // Auto-render to currentpicture. Merged via the position-based add() (which internally
+        // calls this.pic.fit() before attaching it) rather than the plain picture-to-picture add()
+        // -- the plain form defers fitting this.pic until currentpicture itself is shipped out, and
+        // scales this.pic's user-coordinate content (the background fill, every label's anchor
+        // position) by CURRENTPICTURE's own resolved transform rather than this.pic's own
+        // unitsize(diagram_unit). Since nothing in this library ever calls unitsize()/size() on
+        // currentpicture itself (by design -- see the theme file's header comment), that transform
+        // resolves to the identity, collapsing every such position to a fraction of a point.
+        // Forcing this.pic to fit() itself first -- using its own, explicitly-set scale --
+        // sidesteps the whole ambiguity, the same way the diagram add() above already does.
         if (!this.rendered) {
             add(currentpicture, this.pic, (0, 0));
             this.rendered = true;
         }
     }
-    
+
     // Add RelationDiagram directly
     void add(RelationDiagram diagram) {
         picture diagram_pic = diagram.render(
-            get_diagram_width(),
-            get_diagram_height(),
+            get_visual_width(),
+            get_visual_height(),
             diagram_unit
         );
         add_visual(diagram_pic);
     }
-    
+
     // Add DiscretePlot directly
     void add(DiscretePlot diagram) {
         picture diagram_pic = diagram.render(
-            get_diagram_width(),
-            get_diagram_height(),
+            get_visual_width(),
+            get_visual_height(),
             diagram_unit
         );
         add_visual(diagram_pic);
@@ -535,8 +373,8 @@ struct Image {
     // Add Plot directly
     void add(Plot diagram) {
         picture diagram_pic = diagram.render(
-            get_diagram_width(),
-            get_diagram_height(),
+            get_visual_width(),
+            get_visual_height(),
             diagram_unit
         );
         add_visual(diagram_pic);
@@ -545,8 +383,8 @@ struct Image {
     // Add AccumulationTable directly
     void add(AccumulationTable table) {
         picture diagram_pic = table.render(
-            get_diagram_width(),
-            get_diagram_height(),
+            get_visual_width(),
+            get_visual_height(),
             diagram_unit
         );
         add_visual(diagram_pic);
@@ -555,8 +393,8 @@ struct Image {
     // Add TruthTable directly
     void add(TruthTable table) {
         picture diagram_pic = table.render(
-            get_diagram_width(),
-            get_diagram_height(),
+            get_visual_width(),
+            get_visual_height(),
             diagram_unit
         );
         add_visual(diagram_pic);
@@ -565,8 +403,8 @@ struct Image {
     // Add SwitchingNetwork directly
     void add(SwitchingNetwork network) {
         picture diagram_pic = network.render(
-            get_diagram_width(),
-            get_diagram_height(),
+            get_visual_width(),
+            get_visual_height(),
             diagram_unit
         );
         add_visual(diagram_pic);
@@ -575,11 +413,10 @@ struct Image {
     // Add GraphDiagram directly
     void add(GraphDiagram graph) {
         picture diagram_pic = graph.render(
-            get_diagram_width(),
-            get_diagram_height(),
+            get_visual_width(),
+            get_visual_height(),
             diagram_unit
         );
         add_visual(diagram_pic);
     }
 };
-

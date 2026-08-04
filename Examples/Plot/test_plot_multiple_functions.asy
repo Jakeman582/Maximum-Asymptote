@@ -21,8 +21,10 @@ p.add(f5);
 p.add(f6);
 p.add(f7);
 
-Image img = Image(14, 14);
-img.set_diagram_padding(0.5);
+Image img = Image();
+img.width(14);
+img.height(14);
+img.padding(0.5);
 //img.caption_title("Figure");
 //img.caption_text("$x^2$ and $x^3$ over [-4, 4], colors auto-assigned from the theme palette.");
 img.add(p);

@@ -9,5 +9,5 @@ p.set_grid(2, 2);
 p.add(f, color=blue, type=LONG_DASH_DOTTED);
 
 Image img = Image();
-img.set_diagram_padding(0.5);
+img.padding(0.5);
 img.add(p);

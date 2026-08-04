@@ -1,12 +1,11 @@
 import MaximumMathematics;
 
 // Create a gallery with 2 rows and 2 columns
-Gallery gallery = Gallery(2, 2, visual_width=3, visual_height=2);
-
-// Configure gallery-wide settings
-gallery.set_margin(0.5);
-gallery.set_padding(0.3);
-gallery.set_caption_height(0.8);
+Gallery gallery = Gallery(2, 2);
+gallery.width(6);
+gallery.height(4);
+gallery.padding(0.3);
+gallery.label_scheme(LOWERCASE);
 
 // Helper function to create a colored square picture
 picture create_colored_square(real width, real height, pen color) {
@@ -23,8 +22,8 @@ picture blue_square = create_colored_square(3, 2, blue);
 picture green_square = create_colored_square(3, 2, green);
 picture yellow_square = create_colored_square(3, 2, yellow);
 
-// Add squares to gallery with captions
-gallery.add(red_square, 0, 0, "(a)");
-gallery.add(blue_square, 0, 1, "(b)");
-gallery.add(green_square, 1, 0, "(c)");
-gallery.add(yellow_square, 1, 1, "(d)");
+// Add squares in row-major order: top-left, top-right, bottom-left, bottom-right
+gallery.add_visual(red_square);
+gallery.add_visual(blue_square);
+gallery.add_visual(green_square);
+gallery.add_visual(yellow_square);

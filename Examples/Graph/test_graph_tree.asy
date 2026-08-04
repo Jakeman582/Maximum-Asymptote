@@ -17,9 +17,11 @@ tree.add_edge("LA", "LA1");
 tree.add_edge("LA", "LA2");
 tree.add_edge("R", "RA");
 
-Image img = Image(10, 7);
-img.set_diagram_padding(0.5);
-img.caption_title("Figure:");
+Image img = Image();
+img.width(10);
+img.height(7);
+img.padding(0.5);
+img.caption_title("Figure");
 img.caption_text("An unbalanced rooted tree.");
 img.add(tree);
 

@@ -559,23 +559,46 @@ struct RelationDiagram {
     picture render(real width, real height, real unit = diagram_unit) {
         picture pic = new picture;
         unitsize(pic, unit);
-        
+
         if (this.num_sets == 0) {
             return pic;
         }
-        
+
         // Calculate layout
         calculate_layout(width, height, unit);
-        
+
+        // Draw into a working picture first, rather than directly into the picture this method
+        // returns -- the zone math above (label zone height, element paddings) balances things
+        // internally, but doesn't guarantee the actual drawn ink ends up symmetric within the full
+        // (0,0)-(width,height) box (e.g. the default theme constants leave noticeably more room
+        // above the set-name labels than below the bottom-most element). Measuring the real ink
+        // and re-centering it here means that stays true regardless of what font sizes a theme
+        // uses, without requiring anyone to hand-tune padding constants to compensate.
+        picture raw = new picture;
+        unitsize(raw, unit);
+
         // Draw sets
-        draw_sets(pic, unit, width);
-        
+        draw_sets(raw, unit, width);
+
         // Draw arrows
-        draw_arrows(pic, unit, width);
-        
-        // Draw debug visualization if enabled
-        draw_debug(pic, unit, width, height);
-        
+        draw_arrows(raw, unit, width);
+
+        // Measured before debug overlays are drawn, so turning debug mode on/off never changes
+        // the computed shift -- the overlays describe zone boundaries, not diagram content.
+        pair content_min = min(raw, true);
+        pair content_max = max(raw, true);
+        pair shift = (
+            (width - (content_max.x - content_min.x)) / 2 - content_min.x,
+            (height - (content_max.y - content_min.y)) / 2 - content_min.y
+        );
+
+        // Debug visualization describes the same zone coordinates the content above was drawn
+        // with, so it belongs in `raw` too -- that way it's carried along by the same shift below,
+        // staying aligned with the content it's annotating.
+        draw_debug(raw, unit, width, height);
+
+        add(pic, raw, shift);
+
         return pic;
     }
 };

@@ -1,13 +1,12 @@
 import MaximumMathematics;
 
 // Create a gallery with 2 rows and 3 columns
-Gallery gallery = Gallery(2, 3, visual_width=3, visual_height=2);
-
-// Configure gallery-wide settings
-gallery.set_margin(0.5);
-gallery.set_padding(0.3);
-gallery.set_caption_height(3.8);  // Increased by 3cm (was 0.8)
-gallery.set_debug_mode(true);  // Enable debug outlines
+Gallery gallery = Gallery(2, 3);
+gallery.width(9);
+gallery.height(4);
+gallery.padding(0.3);
+gallery.label_scheme(LOWERCASE);
+gallery.debug();  // Enable debug outlines
 
 // Helper function to create a colored square picture
 picture create_colored_square(real width, real height, pen color) {
@@ -26,17 +25,17 @@ picture yellow_square = create_colored_square(3, 2, yellow);
 picture orange_square = create_colored_square(3, 2, orange);
 picture purple_square = create_colored_square(3, 2, purple);
 
-// Add squares to gallery with captions
+// Add squares in row-major order
 // Row 0
-gallery.add(red_square, 0, 0, "(a)");
-gallery.add(blue_square, 0, 1, "(b)");
-gallery.add(green_square, 0, 2, "(c)");
+gallery.add_visual(red_square);
+gallery.add_visual(blue_square);
+gallery.add_visual(green_square);
 
 // Row 1
-gallery.add(yellow_square, 1, 0, "(d)");
-gallery.add(orange_square, 1, 1, "(e)");
-gallery.add(purple_square, 1, 2, "(f)");
+gallery.add_visual(yellow_square);
+gallery.add_visual(orange_square);
+gallery.add_visual(purple_square);
 
 // Add gallery caption
-gallery.caption_title("Figure 1:");
+gallery.caption_title("Figure 1");
 gallery.caption_text("A 2x3 gallery of colored squares demonstrating the layout system with automatic text wrapping for long captions that exceed the available width.");

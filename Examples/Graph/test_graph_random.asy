@@ -17,11 +17,18 @@ Graph seed_1 = Graph();  build_graph(seed_1);  seed_1.set_layout(RANDOM);  seed_
 Graph seed_2 = Graph();  build_graph(seed_2);  seed_2.set_layout(RANDOM);  seed_2.set_seed(2);
 Graph seed_3 = Graph();  build_graph(seed_3);  seed_3.set_layout(RANDOM);  seed_3.set_seed(3);
 
-Gallery gallery = Gallery(1, 3, 6, 6);
-gallery.set_margin(0.5);
-gallery.set_padding(0.3);
-gallery.add(seed_1, 0, 0, "seed 1");
-gallery.add(seed_2, 0, 1, "seed 2");
-gallery.add(seed_3, 0, 2, "seed 3");
+Gallery gallery = Gallery(1, 3);
+gallery.width(18);
+gallery.height(6);
+gallery.padding(0.3);
+gallery.label_scheme(NUMERIC);
+
+// Added left to right: seed 1, seed 2, seed 3.
+gallery.add(seed_1);
+gallery.add(seed_2);
+gallery.add(seed_3);
+
+gallery.caption_title("Figure 1");
+gallery.caption_text("The same graph laid out under RANDOM with seeds 1, 2, and 3, left to right.");
 
 // Note: run `asy Examples/Graph/test_graph_random.asy` to render

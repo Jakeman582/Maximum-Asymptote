@@ -2,7 +2,7 @@
 
 A comprehensive Asymptote library for creating professional mathematical diagrams and visualizations.
 
-> Development is active. Documentation is gradually moving to the Maximum Mathematics website, which is being reworked; this README is the current source of truth for the API.
+> Development is active. Full documentation now lives at the [Maximum Mathematics website](https://jakeman582.github.io/Maximum-Asymptote/); this README remains a complete, single-page reference.
 
 ---
 
@@ -11,7 +11,7 @@ A comprehensive Asymptote library for creating professional mathematical diagram
 Every figure follows the same path:
 
 1. **Create a visualization** and configure its data (constructor + fluent methods).
-2. **Create an `Image`** and configure it with setter methods (size, margins, padding, caption, background).
+2. **Create an `Image`** and configure it with setter methods (size, padding, caption, background).
 3. **Add the visualization to the image** with `image.add(visualization)`.
 
 That last step **renders automatically** — you never call a render, draw, or output function yourself. The only exception is the escape hatch: if you want the bare visualization *without* an enclosing image, you call the visualization's own `render(width, height)` directly (see [Standalone rendering](#standalone-rendering)).
@@ -27,8 +27,8 @@ diagram.add_relation(0, 1, new pair[] {(0,0), (1,1), (2,2)});
 
 // 2. Create + configure an image
 Image img = Image();
-img.set_diagram_padding(0.5);
-img.caption_title("Figure 1:");
+img.padding(0.5);
+img.caption_title("Figure 1");
 img.caption_text("A bijection between two sets.");
 
 // 3. Add — this renders automatically
@@ -67,46 +67,47 @@ Update anytime with `git pull` — there is no separate build or install step.
 
 ## The `Image`
 
-`Image` is the canvas your visualization is drawn into. Create it with a size (in centimeters) and configure it with setters.
+`Image` is the canvas your visualization is drawn into. Create it with a size (in centimeters) and configure it with fluent methods. `width`/`height` describe the visualization's own area only — a caption, if you add one, is stacked below that area and sized to fit its own content, rather than being carved out of the height you give it. See [Sizing](#sizing) below.
 
 ```asy
-Image img = Image();          // default 10 x 8
-Image img = Image(14, 10);    // explicit width x height
+Image img = Image();   // default 10 x 8
 ```
 
-Size can also be set after construction with `set_width(w)` / `set_height(h)`.
+Set an explicit size with `width(w)` / `height(h)`.
 
-A visualization is laid out to **fill the image's content area** (the image size minus its padding). If the area is too small for the content, the visualization will be cramped — increase the width/height until it looks right. `set_debug_mode(true)` draws the zones and bounds to help you tune sizes.
+A visualization is laid out to **fill the visualization area** (the width/height you gave it, minus its padding), and is automatically **centered** within that area on both axes if it doesn't fill it exactly. If the area is too small for the content, the visualization will be cramped — increase the width/height until it looks right. `debug()` draws a border around the entire rendered picture, the visualization area's own border, and, when a caption is present, its zone/title separators, to help you tune sizes — call it after `add()`/`add_visual()`, since there's nothing to outline until the image has actually been rendered.
 
 ### Configuration methods
 
 | Concern | Methods |
 |---|---|
-| **Dimensions** | `set_width(w)`, `set_height(h)` (or pass to the constructor) |
-| **Margins** (outside the canvas) | `set_margin(m)`, `set_margin_horizontal(m)`, `set_margin_vertical(m)`, `set_margin_left/right/top/bottom(m)` |
-| **Diagram padding** (inside the canvas, around the visualization) | `set_diagram_padding(p)`, `set_diagram_padding_horizontal/vertical(p)`, `set_diagram_padding_left/right/top/bottom(p)` |
-| **Caption padding** (inside the caption zone) | `set_caption_padding(p)`, `set_caption_padding_horizontal/vertical(p)`, `set_caption_padding_left/right/top/bottom(p)` |
-| **Caption** | `caption_title(text)`, `caption_text(text)`, `set_caption_title_width_factor(f)` — the caption zone's height is auto-sized to fit its content |
-| **Background** | `set_background_color(pen)` |
-| **Debug** | `set_debug_mode(bool)` |
+| **Dimensions** | `width(w)`, `height(h)` — the visualization area only, see [Sizing](#sizing) |
+| **Padding** (around the visualization, inside its area) | `padding(p)` / `padding(h, v)` / `padding(l, t, r, b)`, `padding_horizontal/vertical(p)`, `padding_left/right/top/bottom(p)` |
+| **Caption** | `caption_title(text)`, `caption_text(text)` — see [Captions](#captions) |
+| **Background** | `background_color(pen)` |
+| **Debug** | `debug()` |
 | **Add + render** | `add(visualization)` |
 
-The more specific a setter, the higher its priority (CSS-like): `set_margin` sets all four sides, `set_margin_horizontal` overrides left+right, `set_margin_left` overrides just the left.
+`padding` is overloaded by argument count rather than needing separate per-side calls: the 1-argument form sets all four sides, the 2-argument form sets horizontal then vertical, and the 4-argument form sets left, top, right, and bottom independently. The `_horizontal`/`_vertical`/`_left`/`_right`/`_top`/`_bottom` methods are there for when you only want to override one axis or side without restating the rest.
+
+### Sizing
+
+`width`/`height` size the visualization area only. With no caption, that's also the size of the whole rendered picture. With one, the caption zone sits directly beneath the visualization area, spanning the same width, with its own height auto-sized to exactly fit its content (title, text, and however many lines the text wraps to) — so the whole rendered picture ends up `height` plus however tall the caption turns out to be, not just `height`. There's no caption height to tune: change the caption text or the image width (which changes how the text wraps) and the zone resizes itself accordingly.
 
 ### Captions
 
-A caption has two optional parts laid out side by side: a right-aligned **title** in a narrow left column and a left-aligned, word-wrapped **text** filling the rest.
+A caption has two optional parts, laid out as one line: a left-aligned **title**, and left-aligned, word-wrapped **text** immediately following it. When both are given, a colon and a space are inserted between them automatically — `caption_title("Figure 1")` + `caption_text("A basic sine curve.")` renders as "Figure 1: A basic sine curve.", so leave the colon out of the title yourself. A lone title or lone text (only one of the two given) is rendered as-is, flush with the caption zone's left edge.
 
 ```asy
-Image img = Image(12, 8);
-img.caption_title("Figure 2:");
+Image img = Image();
+img.width(12);
+img.height(8);
+img.caption_title("Figure 2");
 img.caption_text("The distribution of outcomes across the sample space.");
 img.add(diagram);
 ```
 
-Provide only `caption_title`, only `caption_text`, or both. Provide neither and no caption zone is created. Both parts support LaTeX math.
-
-The caption zone's height is **auto-sized** to exactly fit the current caption content — measured from the actual rendered title and text (including how many lines the text wraps into at the image's width), plus caption padding. The diagram zone always gets the remainder of the image height. There's no manual height to set or tune: change the caption text, the image width (which changes how the text wraps), or `set_caption_padding(p)` for breathing room, and the zone resizes itself accordingly.
+Provide only `caption_title`, only `caption_text`, or both. Provide neither and no caption zone is created. Both parts support LaTeX math. Wrapped continuation lines (once the text runs past the first line) stay indented under where the text started, rather than restarting at the caption zone's left edge underneath the title.
 
 ---
 
@@ -129,7 +130,7 @@ diagram.add_relation(0, 1, new pair[] {(0,0), (1,1), (2,2)});   // A -> B
 diagram.add_relation(1, 2, new pair[] {(0,1), (1,2), (2,0)});   // B -> C
 
 Image img = Image();
-img.set_diagram_padding(0.5);
+img.padding(0.5);
 img.add(diagram);
 ```
 
@@ -144,32 +145,38 @@ img.add(diagram);
 
 ### TruthTable
 
-Truth tables for boolean expressions. You give the variable names, the column labels, and one evaluator function per column. An evaluator receives a `bool[]` of the current row's variable values and returns the column's boolean result; the table generates all 2ⁿ rows for you.
+Truth tables built up one boolean expression at a time. `add(expression)` parses a plain-text boolean expression string, and discovers any variable it hasn't already seen — there's no separate step to declare variables, and no need to write an evaluator function. Column headers render the expression back out as LaTeX, exactly as typed (`"!(p & q)"` renders as $\neg(p \land q)$, not some logically-equivalent rewrite); the table generates all 2ⁿ rows for you.
 
 ```asy
-string[] variables = {"p", "q"};
-string[] column_labels = {"$\neg p$", "$p \land q$", "$\neg(p \land q)$"};
+TruthTable table = TruthTable();
+table.add("!p");
+table.add("p & q");
+table.add("!(p & q)");
 
-bool not_p(bool[] v)      { return !v[0]; }
-bool p_and_q(bool[] v)    { return v[0] && v[1]; }
-bool nand(bool[] v)       { return !(v[0] && v[1]); }
-
-bool_array_function[] evaluators = {not_p, p_and_q, nand};
-
-TruthTable table = TruthTable(variables, column_labels, evaluators);
-
-Image img = Image(12, 6);
-img.set_diagram_padding(0.5);
+Image img = Image();
+img.width(12);
+img.height(6);
+img.padding(0.5);
 img.add(table);
+```
+
+Expressions support parentheses and the operators `!` (not), `&` (and), `|` (or), `^` (xor), `->` (implies), and `<->` (iff), in that binding order (tightest to loosest) — e.g. `"p -> q & r"` parses as `p -> (q & r)`, and `"p | q ^ r"` parses as `(p | q) ^ r`.
+
+Any cell can be highlighted for emphasis. `row` is always a 0-indexed data row; `column` is always a 0-indexed *expression* column (0 = the first `add()`ed expression) — variable columns are never individually targetable.
+
+```asy
+table.highlight_row(0);       // Every cell in row 0
+table.highlight_column(1);    // The second expression's header and every one of its cells
+table.highlight(2, 0);        // Just the (row 2, first expression) cell, plus row 2's propositions and column 0's header
 ```
 
 | Method | Purpose |
 |---|---|
-| `TruthTable(variable_labels, column_labels, evaluators, title="Truth Table")` | Build the table |
-| `set_title(title)` | Set the title |
-| `set_debug_mode(bool)` | Draw bounds |
-
-`bool_array_function` is the alias `bool(bool[])`.
+| `TruthTable()` | Create an empty table |
+| `add(expression)` | Parse and add one expression column, discovering any new variables |
+| `highlight_row(row)` | Highlight every cell in a data row |
+| `highlight_column(column)` | Highlight an expression column's header and every one of its cells |
+| `highlight(row, column)` | Highlight one interior cell, that row's atomic-proposition cells, and that column's header; every other cell is unaffected |
 
 ### AccumulationTable
 
@@ -180,8 +187,12 @@ real compound(real x) { return x * 1.05; }   // 5% per period
 
 AccumulationTable table = AccumulationTable(1000, 8, compound, "Compound Interest (5\%)");
 
-Image img = Image(18, 9);
-img.set_diagram_padding(0.5);
+Image img = Image();
+
+img.width(18);
+
+img.height(9);
+img.padding(0.5);
 img.add(table);
 ```
 
@@ -210,9 +221,13 @@ Plot p = Plot(-4, 4);
 p.add(cube);
 p.add(circle, color=red, type=DASHED);
 
-Image img = Image(10, 8);
-img.set_diagram_padding(0.5);
-img.caption_title("Figure 4:");
+Image img = Image();
+
+img.width(10);
+
+img.height(8);
+img.padding(0.5);
+img.caption_title("Figure 4");
 img.caption_text("$x^3$ and $x^2 + y^2 = 9$ on one Plot.");
 img.add(p);
 ```
@@ -291,15 +306,21 @@ Plot p = Plot(-10, 10);
 p.add(sin, color=blue, label="$\sin(x)$");
 p.add(cos, label="$\cos(x)$");   // auto-colored — legend() still shows its resolved color
 
-Image img = Image(10, 10);
+Image img = Image();
+
+img.width(10);
+
+img.height(10);
 img.add(p);
 
-Gallery g = Gallery(1, 2, 10, 10);
-g.add(img.pic, 0, 0);
-g.add(p.legend(10), 0, 1);       // legend() returns a plain picture, addable like any other
+Gallery g = Gallery(1, 2);
+g.width(20);
+g.height(10);
+g.add_visual(img.pic);
+g.add_visual(p.legend(10));      // legend() returns a plain picture, addable like any other
 ```
 
-**Pass the same height you gave the Gallery/Image to `legend()`.** `Gallery.add(picture, ...)` always anchors a picture's bottom-left corner to its cell's bottom-left corner and expects the picture to fill the whole cell — which a full-size `Plot` picture does, but a legend, sized only to its own content by default (`height=0`), doesn't; left at the default, it ends up hugging the bottom of a much taller cell instead of lining up with the plot. Passing `legend()`'s `height` argument to match places the top row at the same margin-inset height the plot's own square top sits at (`height - margin_top`), so the two align.
+**Pass the same height you gave the Gallery/Image to `legend()`.** `Gallery.add_visual()` centers a picture within its cell rather than stretching it, so a legend sized only to its own content by default (`height=0`) ends up smaller than a full-size `Plot` picture and centers instead of lining up with it. Passing `legend()`'s `height` argument to match places the top row at the same margin-inset height the plot's own square top sits at (`height - margin_top`), so the two align.
 
 Row spacing, the line sample's length, and the gap before the label are all theme constants (`legend_row_height`, `legend_line_length`, `legend_label_gap`).
 
@@ -446,9 +467,13 @@ real value(real x) { return 1000 * exp(log(1.05) * x); }
 DiscretePlot g = DiscretePlot(1, 0, "left", 8, value);
 g.set_window(-0.5, 8.5, 0, 0);   // ymin == ymax => auto-compute the y-window
 
-Image img = Image(12, 6);
-img.set_diagram_padding(0.5);
-img.caption_title("Figure 3:");
+Image img = Image();
+
+img.width(12);
+
+img.height(6);
+img.padding(0.5);
+img.caption_title("Figure 3");
 img.caption_text("Discrete accumulation, sampled per period.");
 img.add(g);
 ```
@@ -469,9 +494,13 @@ Draws a boolean expression as a switching (relay) network: a conjunction (`&`) b
 ```asy
 SwitchingNetwork sn = SwitchingNetwork("(A & B) | (!A & C)");
 
-Image img = Image(10, 6);
-img.set_diagram_padding(0.5);
-img.caption_title("Figure:");
+Image img = Image();
+
+img.width(10);
+
+img.height(6);
+img.padding(0.5);
+img.caption_title("Figure");
 img.caption_text("$(A \wedge B) \vee (\bar{A} \wedge C)$, a two-way multiplexer.");
 img.add(sn);
 ```
@@ -504,7 +533,11 @@ g.add_edge("A", "B");
 g.add_edge("B", "C");
 g.add_edge("C", "A");
 
-Image img = Image(8, 8);
+Image img = Image();
+
+img.width(8);
+
+img.height(8);
 img.add(g);
 ```
 
@@ -587,47 +620,55 @@ Styling lives in the theme: `graph_vertex_fill`, `graph_vertex_outline`, `graph_
 
 ## Galleries
 
-`Gallery` arranges several visualizations in a grid. Each cell has the same visual size and an optional per-cell caption. Configure it with setters and add cells by `(row, col)` — like `Image`, the gallery **renders automatically** as you add to it, so you never call a render function yourself. Set gallery-wide options such as the caption last; they re-render the gallery to pick up the change.
-
-The **visual width** and **visual height** describe the size of a single visual within the grid, not the size of the whole gallery. Every cell in the grid reserves the same box: `visual_width` is how wide each individual visual is, and `visual_height` is how tall each individual visual is. The overall gallery grows from these — its total size is the visuals laid out across `rows × cols`, plus the padding, margins, cell captions, and the gallery caption zone. You can set them in the constructor (`visual_width` / `visual_height`) or afterwards with `set_visual_width` / `set_visual_height`. Set them **before** adding visuals, since each visual is rendered to its stored size at the moment you call `add()`.
+`Gallery` arranges several visualizations in a grid. `width`/`height` describe the grid's own area only — a gallery-wide caption, if you add one, is stacked below that area rather than being carved out of it, the same as `Image`. Visualizations are added one at a time with `add(visualization)`: the gallery places each one in row-major order — row 0 left to right, then row 1, and so on — starting at the top left. There's no way to target a specific cell; this keeps the API to one method with no parameters to get wrong. Like `Image`, the gallery **renders automatically** as you add to it, so you never call a render function yourself.
 
 ```asy
-Gallery gallery = Gallery(1, 3, visual_width=4, visual_height=3);
-gallery.set_margin(0.5);
-gallery.set_padding(0.3);
-gallery.set_caption_height(0.8);
+Gallery gallery = Gallery(1, 3);   // 1 row, 3 columns -- required, fixed for the gallery's life
+gallery.width(15);
+gallery.height(4);
+gallery.padding(0.3);
+gallery.margin(0.2);
+gallery.label_scheme(LOWERCASE);
 
 RelationDiagram a = RelationDiagram();
 a.add_set(new string[] {"1", "2"}, "A");
 a.add_set(new string[] {"x", "y"}, "B");
 a.add_relation(0, 1, new pair[] {(0,0), (1,1)});
-gallery.add(a, 0, 0, "Figure 1: Injective");
+gallery.add(a);   // (a) -- top-left
 
 // ... build diagrams b and c the same way ...
-gallery.add(b, 0, 1, "Figure 2: Surjective");
-gallery.add(c, 0, 2, "Figure 3: Bijective");
+gallery.add(b);   // (b)
+gallery.add(c);   // (c)
 
-// Gallery-wide caption, set after the cells — this re-renders automatically.
-gallery.caption_title("Figure 1:");
+// Gallery-wide caption, set after the cells -- this re-renders automatically.
+gallery.caption_title("Figure 1");
 gallery.caption_text("Three kinds of relations between two sets.");
 ```
 
 | Method | Purpose |
 |---|---|
-| `Gallery(rows, cols, visual_width=5, visual_height=4)` | Create the grid |
-| `add(RelationDiagram, row, col, caption="")` | Place a relation diagram in a cell |
-| `add(picture, row, col, caption="")` | Place any pre-rendered picture in a cell |
-| `set_margin / set_padding(v)` | Grid spacing |
-| `set_visual_width / set_visual_height(v)` | Size of each visual in a cell (set before `add`) |
-| `set_caption_height / set_cell_caption_height(h)` | Caption zone heights |
-| `caption_title / caption_text(text)` | Gallery-wide caption |
-| `set_background_color(pen)`, `set_debug_mode(bool)` | Styling / debug |
+| `Gallery(rows, cols)` | Create the grid (required, fixed for the gallery's lifetime) |
+| `width(w)`, `height(h)` | Size of the grid area only (default `20 x 8`) — see `Image`'s sizing model |
+| `padding(...)`, `padding_horizontal/vertical/left/top/right/bottom(v)` | Space around the grid, same overloads as `Image`'s `padding` |
+| `margin(v)` | Space **between** adjacent cells only — never at the grid's outer boundary, which `padding` governs |
+| `background_color(pen)` | Overall background of the whole rendered picture |
+| `caption_title / caption_text(text)` | Gallery-wide caption, below the grid |
+| `color_scheme(scheme)` | Per-cell background tint — see below |
+| `label_scheme(scheme)` | Per-cell `(a)`/`(A)`/`(1)`/`(i)` labels — see below |
+| `debug()` | Draw grid/cell/caption boundaries |
+| `add(visualization)` | Place the next visualization in row-major order |
+| `add_visual(picture)` | Place a raw picture in row-major order |
 
-`Gallery` accepts a `RelationDiagram` directly. To place any other visualization in a cell, render it to a picture first and add that picture:
+`color_scheme` accepts `NONE` (default — just `background_color`), one of `RED`/`ORANGE`/`YELLOW`/`GREEN`/`BLUE`/`INDIGO`/`VIOLET`/`BROWN` for a single tinted background across every cell, one of `CHECKERBOARD_RED`/`..._ORANGE`/`..._YELLOW`/`..._GREEN`/`..._BLUE`/`..._INDIGO`/`..._VIOLET`/`..._BROWN`/`..._GRAY` for two shades of that hue alternating by cell, or plain `CHECKERBOARD` for an alternating pair of the theme's own brand colors.
+
+`label_scheme` accepts `NONE` (default — no labels), `LOWERCASE`/`UPPERCASE` (`(a)`.../`(A)`...), `NUMERIC` (`(1)`...), or `ROMAN` (`(i)`...) — each numbered by row-major `add()` order, reserving a strip at the bottom of every cell sized to fit the label.
+
+`Gallery` accepts a `RelationDiagram` directly (and several other visualization types — see each visualization's own page for its `Gallery.add(...)` overload). To place any other visualization in a cell, render it to a picture first and add that picture:
 
 ```asy
-TruthTable table = TruthTable(variables, column_labels, evaluators);
-gallery.add(table.render(4, 3, 1cm), 0, 1, "Truth table");
+TruthTable table = TruthTable();
+table.add("p & q");
+gallery.add_visual(table.render(4, 3, 1cm));
 ```
 
 ---
@@ -672,11 +713,11 @@ asy -f svg mydiagram.asy     # force SVG
 Global pens, colors, and typography are defined in `Theme/MaximumMathematicsTheme.asy` and shared by every visualization. `MaximumMathematics.asy` itself is just an aggregator — it includes the theme and every module, with no styling of its own. Swap in an alternate theme file to restyle the whole library without touching visualization code.
 
 - **Brand colors:** `brand_color_1` (blue), `brand_color_2` (orange)
-- **Table colors:** `table_header`, `table_sub_header`
+- **Table colors:** `table_variable_header_color`, `table_expression_header_color`, `table_variable_value_color`, `table_expression_value_color`, plus `table_expression_header_highlight_color`, `table_variable_value_highlight_color`, `table_highlight_color`, and the grid pens `outline_pen`/`table_minor_pen`
 - **Graph colors:** `axis_color`, `grid_color`, `function_color_1`, `function_color_2` — `Plot` colors its functions via `plot_function_colors(n)`, which sweeps hue from red to violet in HSV space
 - **Typography:** `header_1`, `header_2`, `header_3`, `text_large`, `text_normal`, `text_small` — plain `pen`s, usable anywhere a pen is expected (e.g. `header_2 + bold`)
 
-Full Asymptote color and pen support is available for anything you pass to a setter (for example `img.set_background_color(rgb(0.98, 0.98, 1.0))`).
+Full Asymptote color and pen support is available for anything you pass to a setter (for example `img.background_color(rgb(0.98, 0.98, 1.0))`).
 
 ---
 

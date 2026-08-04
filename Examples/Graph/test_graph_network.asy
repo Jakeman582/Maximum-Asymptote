@@ -19,9 +19,11 @@ network.add_edge("c", "t", "20");
 network.add_edge("d", "c", "7");
 network.add_edge("d", "t", "4");
 
-Image img = Image(11, 7);
-img.set_diagram_padding(0.5);
-img.caption_title("Figure:");
+Image img = Image();
+img.width(11);
+img.height(7);
+img.padding(0.5);
+img.caption_title("Figure");
 img.caption_text("A flow network with edge capacities.");
 img.add(network);
 

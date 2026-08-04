@@ -1,0 +1,19 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "docs-preview",
+      "runtimeExecutable": "/Users/jacobhiance/.gem/ruby/2.6.0/bin/jekyll",
+      "runtimeArgs": [
+        "serve",
+        "--source", "docs",
+        "--destination", "/tmp/mm_docs_preview_site",
+        "--config", "docs/_config.yml,docs/_config_preview.yml",
+        "--port", "4000",
+        "--host", "127.0.0.1"
+      ],
+      "port": 4000,
+      "url": "http://127.0.0.1:4000"
+    }
+  ]
+}

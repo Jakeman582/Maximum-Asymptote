@@ -19,12 +19,17 @@ p.set_window(-6, 6, -6, 6);
 p.add(parabola, color=blue, label="$y = x^2 - 4$");
 p.add(ellipse, color=red, label="$x^2/16 + y^2/9 = 1$");
 
-Image img = Image(10, 10);
+Image img = Image();
+img.width(10);
+img.height(10);
 img.add(p);
 
-Gallery g = Gallery(1, 2, 10, 10);
-g.add(img.pic, 0, 0);
-g.add(p.legend(10), 0, 1);   // height matches the Gallery's visual_height, so the legend's top row
-                             // lines up with the plot's own square top instead of hugging the bottom
+Gallery g = Gallery(1, 2);
+g.width(20);
+g.height(10);
+g.margin(0.3);
+g.add_visual(img.pic);
+g.add_visual(p.legend(10));  // height matches the cell height, so the legend's top row lines up
+                              // with the plot's own square top instead of hugging the bottom
 
 // Note: run `asy Examples/Plot/test_plot_parabola_ellipse_intersection.asy` to render

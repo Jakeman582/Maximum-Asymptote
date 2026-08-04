@@ -26,9 +26,11 @@ for (int row = 0; row < 2; ++row)
 // A shortcut straight across the grid — without avoidance this would run right through "E".
 mesh.add_edge("A", "I");
 
-Image img = Image(8, 8);
-img.set_diagram_padding(0.5);
-img.caption_title("Figure:");
+Image img = Image();
+img.width(8);
+img.height(8);
+img.padding(0.5);
+img.caption_title("Figure");
 img.caption_text("A shortcut edge curves around the vertex it would otherwise cross.");
 img.add(mesh);
 

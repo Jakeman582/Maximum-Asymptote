@@ -1,0 +1,19 @@
+// just-the-docs' own customization hook (see its just-the-docs.scss.liquid, which @imports this
+// file automatically after all of its own styles and variables are already loaded) — this is
+// where a site-local override belongs, rather than trying to @import the theme by name (this
+// theme has no single-file entry point to import; it assembles itself via a Liquid include).
+
+// Rouge (the syntax highlighter) has no lexer for Asymptote, so a ```asy fence isn't wrapped in
+// Rouge's usual bordered/backgrounded .highlight container (see just-the-docs' code.scss) — it
+// falls back to a bare <pre>, which otherwise carries no visual styling at all beyond the
+// monospace font. Give every such block the same bordered, tinted box every other (recognized)
+// language's code block already gets via Rouge, so a code sample still reads as visually distinct
+// from surrounding prose. Scoped to `pre:not(.highlight)` so already-highlighted blocks (e.g. the
+// ```bash examples), which get this styling from Rouge itself, aren't double-boxed.
+pre:not(.highlight) {
+  background-color: $code-background-color;
+  border: $border $border-color;
+  border-radius: $border-radius;
+  padding: $sp-3;
+  overflow-x: auto;
+}
