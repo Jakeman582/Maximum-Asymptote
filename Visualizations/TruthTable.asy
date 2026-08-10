@@ -18,7 +18,30 @@
 // expression column (0 = the first add()'ed expression), never a variable column -- there's no
 // highlighted variant of the variable header's gray, so only expression columns are ever
 // individually targetable.
+//
+// Hiding: hide_table()/hide_row(row)/hide_column(column)/hide_cell(row, column) blank out an
+// expression cell's "0"/"1" text (its fill color, highlighted or not, is untouched) -- and the
+// matching show_*() calls make it visible again. `row`/`column` mean exactly what they mean for
+// highlighting above. Headers and atomic-proposition value cells are never affected by any of these
+// -- only expression (interior) cells can be hidden. State resolves last-call-wins, per cell: replay
+// every hide/show call in the order it was made, most specific or not, and whichever one most
+// recently touched a given cell decides whether it's visible -- so hide_table() then
+// show_cell(2, 1) leaves only that one cell visible, and the reverse leaves only that one hidden.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
+
+int VISIBILITY_TABLE = 0;
+int VISIBILITY_ROW = 1;
+int VISIBILITY_COLUMN = 2;
+int VISIBILITY_CELL = 3;
+
+// One hide()/show() call, in the order it was made -- see is_cell_visible() for how a sequence of
+// these resolves to a single visible/hidden state per cell.
+struct VisibilityEvent {
+    int kind;      // One of the VISIBILITY_* constants above.
+    bool visible;  // true = a show() call, false = a hide() call.
+    int row;       // Meaningful for VISIBILITY_ROW/VISIBILITY_CELL only.
+    int column;    // Meaningful for VISIBILITY_COLUMN/VISIBILITY_CELL only.
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Function: bool_to_text
@@ -46,6 +69,8 @@ struct TruthTable {
     int[] _highlighted_cell_rows;     // Parallel to _highlighted_cell_columns: each pair is one highlight(row, column) call.
     int[] _highlighted_cell_columns;
 
+    VisibilityEvent[] _visibility_events;   // Every hide_*()/show_*() call, in call order.
+
     void operator init() {
         this._variables = new string[];
         this._trees = new ExprNode[];
@@ -54,6 +79,7 @@ struct TruthTable {
         this._highlighted_columns = new int[];
         this._highlighted_cell_rows = new int[];
         this._highlighted_cell_columns = new int[];
+        this._visibility_events = new VisibilityEvent[];
     }
 
     // Parse and add one expression column, e.g. add("p & q") or add("p -> (q <-> r)"). Any variable
@@ -103,6 +129,100 @@ struct TruthTable {
     void highlight(int row, int column) {
         this._highlighted_cell_rows.push(row);
         this._highlighted_cell_columns.push(column);
+    }
+
+    // Hide every expression cell in the table (atomic-proposition cells and every header are never
+    // affected). A later, more specific show_*() call reveals whatever it targets again.
+    void hide_table() {
+        VisibilityEvent e = new VisibilityEvent;
+        e.kind = VISIBILITY_TABLE;
+        e.visible = false;
+        this._visibility_events.push(e);
+    }
+
+    // Show every expression cell in the table, overriding any earlier hide_*() call.
+    void show_table() {
+        VisibilityEvent e = new VisibilityEvent;
+        e.kind = VISIBILITY_TABLE;
+        e.visible = true;
+        this._visibility_events.push(e);
+    }
+
+    // Hide every expression cell in data row `row`.
+    void hide_row(int row) {
+        VisibilityEvent e = new VisibilityEvent;
+        e.kind = VISIBILITY_ROW;
+        e.visible = false;
+        e.row = row;
+        this._visibility_events.push(e);
+    }
+
+    // Show every expression cell in data row `row`, overriding any earlier call that touched it.
+    void show_row(int row) {
+        VisibilityEvent e = new VisibilityEvent;
+        e.kind = VISIBILITY_ROW;
+        e.visible = true;
+        e.row = row;
+        this._visibility_events.push(e);
+    }
+
+    // Hide every cell in expression column `column`.
+    void hide_column(int column) {
+        VisibilityEvent e = new VisibilityEvent;
+        e.kind = VISIBILITY_COLUMN;
+        e.visible = false;
+        e.column = column;
+        this._visibility_events.push(e);
+    }
+
+    // Show every cell in expression column `column`, overriding any earlier call that touched it.
+    void show_column(int column) {
+        VisibilityEvent e = new VisibilityEvent;
+        e.kind = VISIBILITY_COLUMN;
+        e.visible = true;
+        e.column = column;
+        this._visibility_events.push(e);
+    }
+
+    // Hide the single expression cell at data row `row`, expression column `column`.
+    void hide_cell(int row, int column) {
+        VisibilityEvent e = new VisibilityEvent;
+        e.kind = VISIBILITY_CELL;
+        e.visible = false;
+        e.row = row;
+        e.column = column;
+        this._visibility_events.push(e);
+    }
+
+    // Show the single expression cell at data row `row`, expression column `column`, overriding any
+    // earlier call that touched it.
+    void show_cell(int row, int column) {
+        VisibilityEvent e = new VisibilityEvent;
+        e.kind = VISIBILITY_CELL;
+        e.visible = true;
+        e.row = row;
+        e.column = column;
+        this._visibility_events.push(e);
+    }
+
+    // Whether the expression cell at data row `row`, expression column `column` should show its
+    // "0"/"1" text. Replays every hide_*()/show_*() call in order, letting each one that touches this
+    // cell (at any granularity) overwrite the running answer -- so whichever call happened last wins.
+    bool is_cell_visible(int row, int column) {
+        bool visible = true;
+        for (int i = 0; i < this._visibility_events.length; ++i) {
+            VisibilityEvent e = this._visibility_events[i];
+            if (e.kind == VISIBILITY_TABLE) {
+                visible = e.visible;
+            } else if (e.kind == VISIBILITY_ROW && e.row == row) {
+                visible = e.visible;
+            } else if (e.kind == VISIBILITY_COLUMN && e.column == column) {
+                visible = e.visible;
+            } else if (e.kind == VISIBILITY_CELL && e.row == row && e.column == column) {
+                visible = e.visible;
+            }
+        }
+        return visible;
     }
 
     bool is_row_highlighted(int row) {
@@ -212,6 +332,10 @@ struct TruthTable {
     //     highlight() target. Merely sharing a row or column with a highlight() target, without being
     //     a target itself, has no effect -- that cell stays plain white.
     //   - All values (0/1) are right-aligned within their cell; headers stay centered.
+    //   - An expression cell hidden by hide_table()/hide_row()/hide_column()/hide_cell() (and not
+    //     since re-shown) draws no text at all -- its fill color is entirely unaffected, so a hidden
+    //     cell can still be highlighted. Headers and atomic-proposition value cells can never be
+    //     hidden.
     //   - The outer border, the boundary between the atomic-proposition and expression columns, and
     //     the boundary between the header row and the data rows all use outline_pen; every other
     //     row/column separator uses table_minor_pen (half its thickness).
@@ -253,6 +377,17 @@ struct TruthTable {
             }
             if (this._highlighted_cell_columns[i] < 0 || this._highlighted_cell_columns[i] >= expression_count) {
                 abort("TruthTable.highlight: column " + (string)this._highlighted_cell_columns[i]
+                      + " is out of range (table has " + (string)expression_count + " expression columns)");
+            }
+        }
+        for (int i = 0; i < this._visibility_events.length; ++i) {
+            VisibilityEvent e = this._visibility_events[i];
+            if ((e.kind == VISIBILITY_ROW || e.kind == VISIBILITY_CELL) && (e.row < 0 || e.row >= rows)) {
+                abort("TruthTable.hide_row/hide_cell/show_row/show_cell: row " + (string)e.row
+                      + " is out of range (table has " + (string)rows + " rows)");
+            }
+            if ((e.kind == VISIBILITY_COLUMN || e.kind == VISIBILITY_CELL) && (e.column < 0 || e.column >= expression_count)) {
+                abort("TruthTable.hide_column/hide_cell/show_column/show_cell: column " + (string)e.column
                       + " is out of range (table has " + (string)expression_count + " expression columns)");
             }
         }
@@ -370,6 +505,7 @@ struct TruthTable {
                 label(pic, bool_to_text(values[c]), (x_right, y_center), align=W, p=text_normal);
             }
             for (int c = 0; c < expression_count; ++c) {
+                if (!this.is_cell_visible(r, c)) continue;
                 int column = variable_count + c;
                 real x_right = column_left[column + 1] - horizontal_padding;
                 bool result = evaluate_expr(this._trees[c], this._variables, values);

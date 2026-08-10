@@ -220,6 +220,28 @@ img.add(table);
 
 <img src="{{ '/assets/images/truth-table/highlighted-column.svg' | relative_url }}" alt="A truth table with the entire p or q column highlighted, header and all" class="mx-auto d-block" style="max-width: 400px; width: 100%;" />
 
+## Hiding
+
+Any expression cell's "0"/"1" text can be hidden — useful for a worksheet where a student fills in the blanks. `hide_table()`/`hide_row(row)`/`hide_column(column)`/`hide_cell(row, column)` blank out a cell's text; the matching `show_table()`/`show_row(row)`/`show_column(column)`/`show_cell(row, column)` make it visible again. `row`/`column` mean exactly what they mean for highlighting above.
+
+Headers and atomic-proposition value cells can never be hidden — only expression (interior) cells. Hiding is completely independent of highlighting: a hidden cell keeps whatever fill color it would otherwise have, highlighted or not, and just draws no text.
+
+State resolves **last-call-wins, per cell** — whichever hide/show call most recently touched a given cell, at any granularity, decides whether it's visible:
+
+```asy
+TruthTable table = TruthTable();
+table.add("p & q");
+table.add("p | q");
+table.add("p ^ q");
+table.hide_table();          // blank every expression cell...
+table.show_cell(2, 1);       // ...except this one
+```
+
+```asy
+table.hide_column(1);        // hide every cell in "p | q"...
+table.show_row(3);           // ...except row 3, which shows in every column again
+```
+
 ## Methods
 
 | Method | Purpose |
@@ -229,3 +251,11 @@ img.add(table);
 | `highlight_row(int row)` | Highlight every cell in a data row |
 | `highlight_column(int column)` | Highlight an expression column's header and every one of its cells |
 | `highlight(int row, int column)` | Highlight one interior cell, that row's atomic-proposition cells, and that column's header |
+| `hide_table()` | Hide every expression cell's text |
+| `show_table()` | Show every expression cell's text |
+| `hide_row(int row)` | Hide every expression cell's text in a data row |
+| `show_row(int row)` | Show every expression cell's text in a data row |
+| `hide_column(int column)` | Hide an expression column's cell text |
+| `show_column(int column)` | Show an expression column's cell text |
+| `hide_cell(int row, int column)` | Hide one interior cell's text |
+| `show_cell(int row, int column)` | Show one interior cell's text |
