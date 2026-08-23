@@ -27,17 +27,22 @@ int EXPR_IFF = 6;
 // A node in a boolean expression tree.
 //
 // Field applicability by kind:
-//    variable, negated - LEAF only. negated is always false on a freshly parsed tree (raw parse
-//                        trees represent negation with a NOT node instead); normalize() below is
-//                        what moves negation onto the leaf itself.
-//    children          - NOT: exactly 1 child. AND/OR/XOR/IMPLIES/IFF: exactly 2 children (chains
-//                        like A & B & C parse as nested binary nodes, e.g. AND(AND(A,B),C) —
-//                        equivalent to a flat n-ary AND for every purpose this tree is used for).
+//    variable, negated  - LEAF only. negated is always false on a freshly parsed tree (raw parse
+//                         trees represent negation with a NOT node instead); normalize() below is
+//                         what moves negation onto the leaf itself.
+//    children           - NOT: exactly 1 child. AND/OR/XOR/IMPLIES/IFF: exactly 2 children (chains
+//                         like A & B & C parse as nested binary nodes, e.g. AND(AND(A,B),C) —
+//                         equivalent to a flat n-ary AND for every purpose this tree is used for).
+//    explicit_parens    - Any kind. Set by the parser whenever this exact node was wrapped in "(...)"
+//                         in the original input (see parse_level()'s "(" branch) -- expr_to_latex()
+//                         uses this to keep a redundant-but-intentional paren the user actually typed
+//                         (e.g. "(p & q) | r"), not just ones the grammar strictly requires.
 struct ExprNode {
     int kind;
     string variable;
     bool negated;
     ExprNode[] children;
+    bool explicit_parens;
 }
 
 // Mutable scan position over the input string, shared across parse_level()'s recursive calls.
@@ -169,6 +174,7 @@ ExprNode parse_level(ParserState s, int level) {
                 abort("BooleanExpression: expected ')' in expression: " + s.input);
             }
             ++s.pos;
+            e.explicit_parens = true;
             return e;
         }
         skip_whitespace(s);
@@ -285,9 +291,12 @@ bool evaluate_expr(ExprNode node, string[] variable_names, bool[] variable_value
     return left == right;   // EXPR_IFF
 }
 
-// Binding strength for expr_to_latex()'s minimal-parenthesization logic -- higher binds tighter.
-// Mirrors parse_level()'s levels above, just numbered the opposite way (tightest first).
+// Binding strength for expr_to_latex()'s parenthesization logic -- higher binds tighter. Mirrors
+// parse_level()'s levels above, just numbered the opposite way (tightest first). LEAF binds tighter
+// than everything, including NOT, so a bare variable is never parenthesized on precedence grounds
+// alone (only explicit_parens can add parens around one).
 int expr_precedence(int kind) {
+    if (kind == EXPR_LEAF) return 6;
     if (kind == EXPR_NOT) return 5;
     if (kind == EXPR_AND) return 4;
     if (kind == EXPR_OR) return 3;
@@ -310,28 +319,30 @@ string expr_operator_latex(int kind) {
 // Description:
 // Render a raw (or normalized) expression tree back out as LaTeX, matching what was typed rather
 // than any logically-equivalent rewrite -- call this on the tree parse_boolean_expression() returns
-// directly, not on normalize()'s output. Parentheses are added only where the grammar actually
-// requires them (a child whose own operator binds looser than its parent needs), via the standard
-// technique of threading the minimum precedence a child may render at without parentheses down
-// through the recursion; a left child may match its parent's own precedence exactly (safe for a
-// left-associative grammar), a right child may not.
+// directly, not on normalize()'s output. A node is parenthesized when either the grammar requires it
+// (its own operator binds looser than its parent needs -- the standard technique of threading the
+// minimum precedence a child may render at without parentheses down through the recursion; a left
+// child may match its parent's own precedence exactly, safe for a left-associative grammar, but a
+// right child may not) OR the input explicitly wrapped it in "(...)" itself (explicit_parens), even
+// if the grammar wouldn't have required it -- "(p & q) | r" keeps its parens on screen even though
+// & already binds tighter than |, since the goal here is matching the input, not minimizing parens.
 //
 // Inputs:
 //    node           - Subtree to render.
 //    min_precedence - The precedence this subtree must meet or exceed to avoid being wrapped in
-//                      parentheses (0 at the top-level call -- never wrap the whole expression).
+//                      parentheses on grammar grounds alone (0 at the top-level call -- never wrap
+//                      the whole expression just because it's the top level).
 //
 // Outputs:
 //    latex - The rendered LaTeX source, with no surrounding $ delimiters.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 string expr_to_latex(ExprNode node, int min_precedence = 0) {
-    if (node.kind == EXPR_LEAF) {
-        return node.negated ? "\neg " + node.variable : node.variable;
-    }
-
     int own_precedence = expr_precedence(node.kind);
     string result;
-    if (node.kind == EXPR_NOT) {
+
+    if (node.kind == EXPR_LEAF) {
+        result = node.negated ? "\neg " + node.variable : node.variable;
+    } else if (node.kind == EXPR_NOT) {
         result = "\neg " + expr_to_latex(node.children[0], own_precedence);
     } else {
         string left = expr_to_latex(node.children[0], own_precedence);
@@ -339,7 +350,8 @@ string expr_to_latex(ExprNode node, int min_precedence = 0) {
         result = left + expr_operator_latex(node.kind) + right;
     }
 
-    return own_precedence < min_precedence ? "(" + result + ")" : result;
+    bool needs_parens = node.explicit_parens || (own_precedence < min_precedence);
+    return needs_parens ? "(" + result + ")" : result;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

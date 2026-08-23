@@ -25,11 +25,24 @@ img.add(sn);
 
 <img src="{{ '/assets/images/switching-network/switching-network.svg' | relative_url }}" alt="A switching network for a two-way multiplexer" class="mx-auto d-block" style="max-width: 500px; width: 100%;" />
 
+## Open and closed switches
+
+Every switch renders **open** by default — the diagonal tick that reads as a break in the wire. `close(variable)`/`open(variable)` set a specific atomic proposition's state explicitly; calling either again for the same variable overrides its previous state.
+
+```asy
+SwitchingNetwork sn = SwitchingNetwork("(A & B) | (!A & C)");
+sn.close("A");   // A's switch draws closed (an unbroken wire) -- and A's negation draws open
+```
+
+Setting a variable's state affects **both** every switch for that variable and every switch for its negation, drawn as the opposite state — physically the two are wired to the same mechanism, so `close("A")` closes every `A` switch and opens every `!A` switch at the same time. `variable` must actually appear in the expression the network was built from.
+
 ## Methods
 
 | Method | Purpose |
 |---|---|
 | `SwitchingNetwork(expression)` | Parse the expression and build the network |
+| `close(string variable)` | Draw every switch for `variable` closed, and every switch for its negation open |
+| `open(string variable)` | Draw every switch for `variable` open, and every switch for its negation closed |
 | `set_debug_mode(bool)` | Draw bounds |
 
 ## Expression syntax

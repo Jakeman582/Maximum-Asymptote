@@ -331,7 +331,8 @@ struct TruthTable {
     //     background; table_highlight_color if it's an exact highlight_row()/highlight_column()/
     //     highlight() target. Merely sharing a row or column with a highlight() target, without being
     //     a target itself, has no effect -- that cell stays plain white.
-    //   - All values (0/1) are right-aligned within their cell; headers stay centered.
+    //   - Atomic-proposition values (0/1) are centered within their cell; expression values are
+    //     right-aligned within theirs. Headers stay centered.
     //   - An expression cell hidden by hide_table()/hide_row()/hide_column()/hide_cell() (and not
     //     since re-shown) draws no text at all -- its fill color is entirely unaffected, so a hidden
     //     cell can still be highlighted. Headers and atomic-proposition value cells can never be
@@ -489,9 +490,9 @@ struct TruthTable {
             label(pic, header_labels[c], (x_center, row_center(0)), p=text_normal);
         }
 
-        // Data row text: right-aligned within its cell, anchored horizontal_padding in from the
-        // column's right edge. Every row's variable assignment is built once and reused for all
-        // expression columns.
+        // Data row text: atomic-proposition values are centered in their cell; expression values are
+        // right-aligned, anchored horizontal_padding in from the column's right edge. Every row's
+        // variable assignment is built once and reused for all expression columns.
         for (int r = 0; r < rows; ++r) {
             real y_center = row_center(r + 1);
 
@@ -501,8 +502,8 @@ struct TruthTable {
             }
 
             for (int c = 0; c < variable_count; ++c) {
-                real x_right = column_left[c + 1] - horizontal_padding;
-                label(pic, bool_to_text(values[c]), (x_right, y_center), align=W, p=text_normal);
+                real x_center = (column_left[c] + column_left[c + 1]) / 2;
+                label(pic, bool_to_text(values[c]), (x_center, y_center), p=text_normal);
             }
             for (int c = 0; c < expression_count; ++c) {
                 if (!this.is_cell_visible(r, c)) continue;
