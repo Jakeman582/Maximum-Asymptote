@@ -151,9 +151,12 @@ pen switch_thickness = linewidth(1.2);
 real switch_unit_width = 1.5;         // Width of a single leaf switch cell
 real switch_unit_height = 1.2;        // Height of a single leaf switch cell
 real switch_parallel_spacing = 0.4;   // Vertical gap between stacked OR branches
+real switch_series_gap = 0.3;         // Horizontal gap between two AND-composed sub-networks
+real switch_parallel_lead = 0.25;     // Inset lead wire on each side of an OR's branch/merge dots
 real switch_tick_height = 0.35;       // Height of the diagonal open-switch tick mark
 real switch_lead_length = 0.4;        // Length of the input/output lead stubs on the whole network
 real switch_terminal_radius = 0.06;   // Radius of the filled terminal dot at each end of the network
+real switch_pivot_radius = 0.045;     // Radius of the filled pivot/connection dots on each switch
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // RelationDiagram

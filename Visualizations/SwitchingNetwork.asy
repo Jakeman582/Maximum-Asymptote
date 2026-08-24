@@ -63,28 +63,36 @@ NetworkLayout measure_node(ExprNode node, real scale) {
     } else if (node.kind == EXPR_AND) {
         NetworkLayout a = measure_node(node.children[0], scale);
         NetworkLayout b = measure_node(node.children[1], scale);
+        real gap = switch_series_gap * scale;
         real max_cy = max(a.center_y, b.center_y);
-        layout.width = a.width + b.width;
+        layout.width = a.width + gap + b.width;
         layout.height = max(max_cy - a.center_y + a.height, max_cy - b.center_y + b.height);
         layout.center_y = max_cy;
     } else {
         NetworkLayout a = measure_node(node.children[0], scale);
         NetworkLayout b = measure_node(node.children[1], scale);
         real spacing = switch_parallel_spacing * scale;
-        layout.width = max(a.width, b.width);
+        real lead = switch_parallel_lead * scale;
+        layout.width = max(a.width, b.width) + 2 * lead;
         layout.height = a.height + spacing + b.height;
         layout.center_y = layout.height / 2;
     }
     return layout;
 }
 
-// Whether variable `variable`'s switch was explicitly set closed by close()/open() -- looked up in
-// the parallel switch_variables/switch_closed arrays SwitchingNetwork.render() passes down through
-// draw_node()'s recursion. Not present (no close()/open() call ever named this variable) means open,
-// matching the "everything defaults to open" rule.
-bool is_variable_closed(string variable, string[] switch_variables, bool[] switch_closed) {
+// Whether a leaf for `variable` (negated or not) should draw closed. Looked up in the parallel
+// switch_variables/switch_closed arrays SwitchingNetwork.render() passes down through draw_node()'s
+// recursion, which only ever name the base (non-negated) variable. If `variable` was never named in
+// a close()/open() call, the leaf draws open regardless of negation -- the "everything defaults to
+// open" rule applies to every switch, not just the base variable's, so a bare, never-touched
+// negation must not flip to closed just because it's negated. Only once a call HAS named the
+// variable does negation flip the drawn state, since the two switches are wired to the same
+// mechanism.
+bool is_leaf_closed(string variable, bool negated, string[] switch_variables, bool[] switch_closed) {
     for (int i = 0; i < switch_variables.length; ++i) {
-        if (switch_variables[i] == variable) return switch_closed[i];
+        if (switch_variables[i] == variable) {
+            return negated ? !switch_closed[i] : switch_closed[i];
+        }
     }
     return false;
 }
@@ -99,15 +107,22 @@ bool is_variable_closed(string variable, string[] switch_variables, bool[] switc
 // A leaf draws a horizontal wire with a gap in the middle, the variable's label above it (barred if
 // negated), and either a diagonal tick across the gap (open -- the switch doesn't conduct) or a flat
 // segment filling the gap (closed -- conducts, reading as an unbroken wire). Which one depends on
-// the variable's own state from close()/open() (see is_variable_closed() above) and whether this
+// the variable's own state from close()/open() (see is_leaf_closed() above) and whether this
 // particular leaf is the negated form: a bare "p" leaf is closed exactly when p's state is closed,
 // but a "!p" leaf is closed exactly when p's state is open -- the two are wired to the same
-// mechanism, so they're always opposite. An AND draws its two children side by side, each vertically
-// offset so their connection points land on the same line — the higher of the two center_y values,
-// so no offset is ever negative. An OR draws its two children stacked (the first on top) with a gap
-// between them, padding whichever is narrower with a plain wire extension (split evenly on both
-// ends) so both span the same width, then connects their two connection points with a vertical rail
-// on each side.
+// mechanism, so they're always opposite. If close()/open() was never called for a variable at all,
+// every leaf for it -- negated or not -- draws open, since negation only flips an explicitly-set
+// state. An AND draws its two children side by side, each vertically offset so their connection
+// points land on the same line — the higher of the two center_y values, so no offset is ever
+// negative — joined by a short plain wire (switch_series_gap) so the two sub-networks read as
+// distinct stages rather than merging directly into one another. An OR draws its two children
+// stacked (the first on top) with a gap between them, each padded out to the same total width by a
+// fixed inset lead (switch_parallel_lead) on both ends plus, if one branch is narrower than the
+// other, extra plain wire (split evenly) to match it — so every OR always has some breathing room
+// between its own branch/merge dots and whatever's inside it, even when both branches are already
+// the same width. Their two connection points are then joined by a vertical rail on each side, with
+// a filled dot where the incoming wire splits into the two branches and another where they merge
+// back — any time the circuit branches or two branches intersect, it gets a dot.
 //
 // Inputs:
 //    pic              - Picture to draw onto.
@@ -133,48 +148,62 @@ void draw_node(picture pic, ExprNode node, real scale, real x0, real y0,
         draw(pic, (x0, cy)--(mid - gap / 2, cy), p=switch_thickness);
         draw(pic, (mid + gap / 2, cy)--(x0 + w, cy), p=switch_thickness);
 
-        bool own_state_closed = is_variable_closed(node.variable, switch_variables, switch_closed);
-        bool closed = node.negated ? !own_state_closed : own_state_closed;
+        bool closed = is_leaf_closed(node.variable, node.negated, switch_variables, switch_closed);
         if (closed) {
             draw(pic, (mid - gap / 2, cy)--(mid + gap / 2, cy), p=switch_thickness);
         } else {
             draw(pic, (mid - gap / 2, cy)--(mid + gap / 2, cy + tick_h), p=switch_thickness);
         }
 
+        // Pivot dot (where the blade is hinged) and connection dot (the fixed contact it swings to
+        // meet when closed) — both sit at the same two points regardless of open/closed state.
+        real pivot_r = switch_pivot_radius * scale;
+        filldraw(pic, circle((mid - gap / 2, cy), pivot_r), black, switch_thickness);
+        filldraw(pic, circle((mid + gap / 2, cy), pivot_r), black, switch_thickness);
+
         string label_text = node.negated ? ("$\overline{" + node.variable + "}$") : ("$" + node.variable + "$");
         label(pic, label_text, (mid, cy + h * 0.35), p=text_normal);
     } else if (node.kind == EXPR_AND) {
         NetworkLayout a = measure_node(node.children[0], scale);
         NetworkLayout b = measure_node(node.children[1], scale);
+        real gap = switch_series_gap * scale;
         real max_cy = max(a.center_y, b.center_y);
+        real join_y = y0 + max_cy;
         draw_node(pic, node.children[0], scale, x0, y0 + (max_cy - a.center_y), switch_variables, switch_closed);
-        draw_node(pic, node.children[1], scale, x0 + a.width, y0 + (max_cy - b.center_y), switch_variables, switch_closed);
+        draw_node(pic, node.children[1], scale, x0 + a.width + gap, y0 + (max_cy - b.center_y), switch_variables, switch_closed);
+        draw(pic, (x0 + a.width, join_y)--(x0 + a.width + gap, join_y), p=switch_thickness);
     } else {
         NetworkLayout a = measure_node(node.children[0], scale);
         NetworkLayout b = measure_node(node.children[1], scale);
-        real max_width = max(a.width, b.width);
+        real branches_width = max(a.width, b.width);
         real spacing = switch_parallel_spacing * scale;
+        real lead = switch_parallel_lead * scale;
+        real total_width = branches_width + 2 * lead;
 
         real a_y0 = y0 + b.height + spacing;   // a on top
         real b_y0 = y0;
-        real a_pad = (max_width - a.width) / 2;
-        real b_pad = (max_width - b.width) / 2;
+        real a_pad = lead + (branches_width - a.width) / 2;
+        real b_pad = lead + (branches_width - b.width) / 2;
         real a_term_y = a_y0 + a.center_y;
         real b_term_y = b_y0 + b.center_y;
+        real own_center_y = y0 + (a.height + spacing + b.height) / 2;
 
-        if (a_pad > 0) {
-            draw(pic, (x0, a_term_y)--(x0 + a_pad, a_term_y), p=switch_thickness);
-            draw(pic, (x0 + a_pad + a.width, a_term_y)--(x0 + max_width, a_term_y), p=switch_thickness);
-        }
-        if (b_pad > 0) {
-            draw(pic, (x0, b_term_y)--(x0 + b_pad, b_term_y), p=switch_thickness);
-            draw(pic, (x0 + b_pad + b.width, b_term_y)--(x0 + max_width, b_term_y), p=switch_thickness);
-        }
+        draw(pic, (x0, a_term_y)--(x0 + a_pad, a_term_y), p=switch_thickness);
+        draw(pic, (x0 + a_pad + a.width, a_term_y)--(x0 + total_width, a_term_y), p=switch_thickness);
+        draw(pic, (x0, b_term_y)--(x0 + b_pad, b_term_y), p=switch_thickness);
+        draw(pic, (x0 + b_pad + b.width, b_term_y)--(x0 + total_width, b_term_y), p=switch_thickness);
+
         draw_node(pic, node.children[0], scale, x0 + a_pad, a_y0, switch_variables, switch_closed);
         draw_node(pic, node.children[1], scale, x0 + b_pad, b_y0, switch_variables, switch_closed);
 
         draw(pic, (x0, a_term_y)--(x0, b_term_y), p=switch_thickness);
-        draw(pic, (x0 + max_width, a_term_y)--(x0 + max_width, b_term_y), p=switch_thickness);
+        draw(pic, (x0 + total_width, a_term_y)--(x0 + total_width, b_term_y), p=switch_thickness);
+
+        // Branch dot (where the incoming wire splits into the two branches) and merge dot (where
+        // they recombine) -- any time the circuit branches or two branches intersect, mark it.
+        real branch_r = switch_pivot_radius * scale;
+        filldraw(pic, circle((x0, own_center_y), branch_r), black, switch_thickness);
+        filldraw(pic, circle((x0 + total_width, own_center_y), branch_r), black, switch_thickness);
     }
 }
 
@@ -263,7 +292,7 @@ struct SwitchingNetwork {
 
         // Input/output leads: short straight stubs before and after the network itself, so it
         // doesn't look like it starts and ends mid-switch — each capped with a filled terminal dot
-        // marking the network's two overall connection points.
+        // marking the network's two overall connection points, labeled T1 (input) and T2 (output).
         real terminal_r = switch_terminal_radius * net_scale;
         draw(pic, (offset_x, term_y)--(offset_x + lead, term_y), p=switch_thickness);
         draw_node(pic, this._root, net_scale, offset_x + lead, offset_y, this._switch_variables, this._switch_closed);
@@ -271,6 +300,8 @@ struct SwitchingNetwork {
              p=switch_thickness);
         filldraw(pic, circle((offset_x, term_y), terminal_r), black, switch_thickness);
         filldraw(pic, circle((offset_x + total_width, term_y), terminal_r), black, switch_thickness);
+        label(pic, "$\textit{T}_1$", (offset_x, term_y), align=NW, p=text_normal);
+        label(pic, "$\textit{T}_2$", (offset_x + total_width, term_y), align=NE, p=text_normal);
 
         if (this._debug_mode) {
             draw(pic, box((0, 0), (width, height)), p=gray + linewidth(0.5));
