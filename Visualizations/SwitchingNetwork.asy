@@ -261,7 +261,9 @@ struct SwitchingNetwork {
     // Description:
     // Measure the network once at natural size (scale=1) to compute the uniform scale that fits it
     // (plus its input/output leads) into the given width/height, then draw it once at that scale —
-    // the same two-pass approach ContinuousPlot uses for its own letterboxing.
+    // the same two-pass approach ContinuousPlot uses for its own letterboxing. The T1/T2 labels'
+    // own measured size is reserved out of width/height before that fit, so the labels themselves
+    // -- not just the network and its leads -- stay inside the given area.
     //
     // Inputs:
     //    width  - Available width in the given unit.
@@ -275,19 +277,28 @@ struct SwitchingNetwork {
         picture pic = new picture;
         unitsize(pic, unit);
 
+        // T1/T2 grow outward (up-left / up-right) from the terminal dots, so the fitting
+        // calculation below reserves this much room on both sides and along the top -- otherwise a
+        // network that already uses the full available width/height (a common case, since the
+        // network is letterboxed to fill whichever dimension is tightest) would push the labels
+        // outside the visualization area entirely.
+        pair label_size = measure_text_size("$\textit{T}_1$", text_normal);
+        real available_width = max(width - 2 * label_size.x, 0.001);
+        real available_height = max(height - label_size.y, 0.001);
+
         NetworkLayout natural = measure_node(this._root, 1);
         real natural_total_width = natural.width + 2 * switch_lead_length;
 
         real net_scale = 1;
         if (natural_total_width > 0 && natural.height > 0) {
-            net_scale = min(width / natural_total_width, height / natural.height);
+            net_scale = min(available_width / natural_total_width, available_height / natural.height);
         }
         NetworkLayout net = measure_node(this._root, net_scale);
 
         real lead = switch_lead_length * net_scale;
         real total_width = net.width + 2 * lead;
-        real offset_x = (width - total_width) / 2;
-        real offset_y = (height - net.height) / 2;
+        real offset_x = label_size.x + (available_width - total_width) / 2;
+        real offset_y = (available_height - net.height) / 2;
         real term_y = offset_y + net.center_y;
 
         // Input/output leads: short straight stubs before and after the network itself, so it
